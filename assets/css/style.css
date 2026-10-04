@@ -108,6 +108,23 @@ footer {
   font-size: 1.05rem;
 }
 
+.hero-side { display: grid; gap: 24px; align-content: end; }
+
+.write-link,
+.edit-link {
+  width: fit-content;
+  padding: 10px 14px;
+  color: var(--white);
+  background: var(--ink);
+  font: 500 .78rem var(--mono);
+  letter-spacing: .04em;
+  text-decoration: none;
+  transition: background-color .2s ease, transform .2s ease;
+}
+
+.write-link:hover,
+.edit-link:hover { background: var(--blue); transform: translateY(-1px); }
+
 .ledger {
   margin-bottom: 120px;
   background: var(--white);
@@ -167,7 +184,8 @@ footer {
 .empty-state code { color: var(--blue); font-family: var(--mono); }
 
 .note-page { width: min(780px, 100%); margin: 72px auto 120px; }
-.back-link { display: inline-block; margin-bottom: 56px; color: var(--blue); text-decoration: none; }
+.note-toolbar { margin-bottom: 56px; display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+.back-link { color: var(--blue); text-decoration: none; }
 .note-header { padding-bottom: 44px; border-bottom: 1px solid var(--ink); }
 .note-kicker { display: flex; gap: 18px; color: var(--blue); }
 .note-header h1 { margin: 18px 0 8px; font-size: clamp(2.3rem, 6vw, 4.5rem); line-height: 1.2; letter-spacing: -.04em; }
@@ -205,7 +223,6 @@ footer {
   .empty-state { padding: 42px 20px; grid-template-columns: 1fr; gap: 8px; }
   .empty-state > span { font-size: 2.6rem; }
   .note-page { margin-top: 48px; }
-  .back-link { margin-bottom: 40px; }
+  .note-toolbar { margin-bottom: 40px; }
   footer { padding: 28px 0; flex-direction: column; align-items: flex-start; justify-content: center; gap: 8px; }
 }
-

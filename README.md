@@ -5,10 +5,12 @@
 
 ## 如何添加记录
 
-1. 复制 [`templates/paper-note.md`](templates/paper-note.md)。
-2. 将副本保存到 `_notes`，例如 `_notes/2026-10-04-paper-title.md`。
-3. 填写文件顶部的信息和正文。
-4. 推送到 GitHub，首页会自动更新。
+最方便的方式是在网站首页点击“写今天的记录”，直接使用 GitHub 网页编辑器。
+正文没有固定格式，可以自由写一段话、列表、公式或任意 Markdown 内容。文件顶部只需
+保留标题和日期等用于网页展示的信息。
+
+也可以复制 [`templates/paper-note.md`](templates/paper-note.md)，将副本保存到 `_notes`，
+例如 `_notes/2026-10-04-paper-title.md`。保存提交后首页会自动更新。
 
 建议文件名使用 `YYYY-MM-DD-short-title.md`，方便按日期查找。
 
