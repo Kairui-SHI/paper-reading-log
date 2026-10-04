@@ -1,0 +1,27 @@
+title: Paper Reading Log
+description: 每天读一点，长期留下一条清晰的研究轨迹。
+lang: zh-CN
+timezone: America/New_York
+url: ""
+baseurl: ""
+markdown: kramdown
+permalink: pretty
+
+collections:
+  notes:
+    output: true
+    permalink: /notes/:name/
+
+defaults:
+  - scope:
+      path: ""
+      type: notes
+    values:
+      layout: note
+
+exclude:
+  - README.md
+  - templates
+  - Gemfile
+  - Gemfile.lock
+

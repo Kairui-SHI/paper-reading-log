@@ -1,0 +1,26 @@
+---
+layout: default
+---
+<article class="note-page">
+  <a class="back-link" href="{{ '/' | relative_url }}">← 返回阅读记录</a>
+  <header class="note-header">
+    <div class="note-kicker">
+      <time datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | date: "%Y · %m · %d" }}</time>
+      {% if page.status %}<span>{{ page.status }}</span>{% endif %}
+    </div>
+    <h1>{{ page.title }}</h1>
+    {% if page.authors %}<p class="authors">{{ page.authors }}</p>{% endif %}
+    {% if page.summary %}<p class="note-summary">{{ page.summary }}</p>{% endif %}
+    <div class="note-actions">
+      {% if page.paper_url %}<a href="{{ page.paper_url }}" target="_blank" rel="noopener">阅读原文 ↗</a>{% endif %}
+      {% if page.code_url %}<a href="{{ page.code_url }}" target="_blank" rel="noopener">查看代码 ↗</a>{% endif %}
+    </div>
+  </header>
+  <div class="note-content">{{ content }}</div>
+  {% if page.tags %}
+    <div class="tag-row" aria-label="标签">
+      {% for tag in page.tags %}<span># {{ tag }}</span>{% endfor %}
+    </div>
+  {% endif %}
+</article>
+

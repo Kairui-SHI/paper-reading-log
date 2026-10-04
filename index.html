@@ -1,0 +1,53 @@
+---
+layout: default
+title: 阅读记录
+---
+<section class="hero">
+  <div>
+    <p class="eyebrow">A PERSONAL RESEARCH INDEX</p>
+    <h1>把每天读过的论文，<br><em>连成一条研究轨迹。</em></h1>
+  </div>
+  <p class="intro">记录问题、方法、结论，也记录尚未想明白的地方。</p>
+</section>
+
+<section class="ledger" aria-labelledby="notes-title">
+  <div class="section-heading">
+    <div>
+      <span class="section-index">01</span>
+      <h2 id="notes-title">阅读记录</h2>
+    </div>
+    <span class="note-count">{{ site.notes | size }} NOTES</span>
+  </div>
+
+  {% assign notes = site.notes | sort: "date" | reverse %}
+  {% if notes.size > 0 %}
+    <div class="note-list">
+      {% for note in notes %}
+        <article class="note-card">
+          <time datetime="{{ note.date | date_to_xmlschema }}">
+            <strong>{{ note.date | date: "%d" }}</strong>
+            <span>{{ note.date | date: "%Y.%m" }}</span>
+          </time>
+          <div class="note-card-body">
+            <div class="note-meta">
+              {% if note.status %}<span>{{ note.status }}</span>{% endif %}
+              {% for tag in note.tags limit:3 %}<span>#{{ tag }}</span>{% endfor %}
+            </div>
+            <h3><a href="{{ note.url | relative_url }}">{{ note.title }}</a></h3>
+            {% if note.summary %}<p>{{ note.summary }}</p>{% endif %}
+          </div>
+          <a class="card-link" href="{{ note.url | relative_url }}" aria-label="阅读 {{ note.title }}">↗</a>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <span aria-hidden="true">01</span>
+      <div>
+        <h3>第一篇笔记，从今天开始。</h3>
+        <p>复制笔记模板到 <code>_notes</code> 目录，填写后推送到 GitHub。</p>
+      </div>
+    </div>
+  {% endif %}
+</section>
+

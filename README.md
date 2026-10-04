@@ -1,19 +1,14 @@
 # Paper Reading Log
 
-记录每天阅读的论文，以及值得回看的想法、问题和结论。
-
-## 阅读记录
-
-| 日期 | 论文 | 标签 | 一句话总结 |
-| --- | --- | --- | --- |
-| — | 还没有记录 | — | 从 `templates/paper-note.md` 复制一份开始记录 |
+一个使用 GitHub Pages 发布的个人论文阅读日志。每天的记录以 Markdown
+保存，首页会自动按日期展示。
 
 ## 如何添加记录
 
 1. 复制 [`templates/paper-note.md`](templates/paper-note.md)。
-2. 将副本保存到对应年份目录，例如 `notes/2026/2026-10-04-paper-title.md`。
-3. 填写论文信息和阅读笔记。
-4. 在上方“阅读记录”表格中增加一行，链接到新笔记。
+2. 将副本保存到 `_notes`，例如 `_notes/2026-10-04-paper-title.md`。
+3. 填写文件顶部的信息和正文。
+4. 推送到 GitHub，首页会自动更新。
 
 建议文件名使用 `YYYY-MM-DD-short-title.md`，方便按日期查找。
 
@@ -21,10 +16,15 @@
 
 ```text
 paper-reading-log/
+├── _layouts/
+├── _notes/
+├── assets/css/
 ├── README.md
-├── notes/
-│   └── 2026/
 └── templates/
     └── paper-note.md
 ```
 
+## 发布
+
+在仓库的 **Settings → Pages** 中选择 **Deploy from a branch**，分支选择
+`main`，目录选择 `/ (root)` 即可。
