@@ -2,8 +2,8 @@ title: Paper Reading Log
 description: 每天读一点，长期留下一条清晰的研究轨迹。
 lang: zh-CN
 timezone: America/New_York
-url: ""
-baseurl: ""
+url: "https://kairui-shi.github.io"
+baseurl: "/paper-reading-log"
 markdown: kramdown
 permalink: pretty
 
@@ -24,4 +24,3 @@ exclude:
   - templates
   - Gemfile
   - Gemfile.lock
-
