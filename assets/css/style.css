@@ -78,8 +78,8 @@ footer {
 .header-note { color: var(--muted); }
 
 .hero {
-  min-height: 450px;
-  padding: 96px 0 64px;
+  min-height: 320px;
+  padding: 64px 0 48px;
   display: grid;
   grid-template-columns: 1fr 280px;
   gap: 56px;
@@ -90,9 +90,9 @@ footer {
 
 .hero h1 {
   margin: 0;
-  font-size: clamp(2.65rem, 6.5vw, 5.3rem);
-  line-height: 1.16;
-  letter-spacing: -.055em;
+  font-size: clamp(2.1rem, 4.2vw, 3.65rem);
+  line-height: 1.25;
+  letter-spacing: -.035em;
 }
 
 .hero h1 em {
@@ -107,23 +107,6 @@ footer {
   color: var(--muted);
   font-size: 1.05rem;
 }
-
-.hero-side { display: grid; gap: 24px; align-content: end; }
-
-.write-link,
-.edit-link {
-  width: fit-content;
-  padding: 10px 14px;
-  color: var(--white);
-  background: var(--ink);
-  font: 500 .78rem var(--mono);
-  letter-spacing: .04em;
-  text-decoration: none;
-  transition: background-color .2s ease, transform .2s ease;
-}
-
-.write-link:hover,
-.edit-link:hover { background: var(--blue); transform: translateY(-1px); }
 
 .ledger {
   margin-bottom: 120px;
@@ -184,11 +167,10 @@ footer {
 .empty-state code { color: var(--blue); font-family: var(--mono); }
 
 .note-page { width: min(780px, 100%); margin: 72px auto 120px; }
-.note-toolbar { margin-bottom: 56px; display: flex; justify-content: space-between; align-items: center; gap: 20px; }
-.back-link { color: var(--blue); text-decoration: none; }
+.back-link { display: inline-block; margin-bottom: 44px; color: var(--blue); text-decoration: none; }
 .note-header { padding-bottom: 44px; border-bottom: 1px solid var(--ink); }
 .note-kicker { display: flex; gap: 18px; color: var(--blue); }
-.note-header h1 { margin: 18px 0 8px; font-size: clamp(2.3rem, 6vw, 4.5rem); line-height: 1.2; letter-spacing: -.04em; }
+.note-header h1 { margin: 16px 0 8px; font-size: clamp(1.9rem, 4vw, 3rem); line-height: 1.28; letter-spacing: -.025em; }
 .authors { color: var(--muted); }
 .note-summary { margin: 32px 0 0; font-size: 1.2rem; }
 .note-actions { margin-top: 24px; display: flex; gap: 14px; }
@@ -211,8 +193,8 @@ footer {
 @media (max-width: 700px) {
   .site-header, main, footer { width: min(100% - 28px, 1120px); }
   .header-note { display: none; }
-  .hero { min-height: auto; padding: 66px 0 48px; grid-template-columns: 1fr; gap: 36px; }
-  .hero h1 { font-size: clamp(2.3rem, 12vw, 3.6rem); }
+  .hero { min-height: auto; padding: 48px 0 40px; grid-template-columns: 1fr; gap: 28px; }
+  .hero h1 { font-size: clamp(1.9rem, 9vw, 2.7rem); }
   .intro { max-width: 420px; }
   .ledger { margin-bottom: 72px; box-shadow: 5px 5px 0 var(--blue-soft); }
   .section-heading { padding: 20px; }
@@ -223,6 +205,6 @@ footer {
   .empty-state { padding: 42px 20px; grid-template-columns: 1fr; gap: 8px; }
   .empty-state > span { font-size: 2.6rem; }
   .note-page { margin-top: 48px; }
-  .note-toolbar { margin-bottom: 40px; }
+  .back-link { margin-bottom: 36px; }
   footer { padding: 28px 0; flex-direction: column; align-items: flex-start; justify-content: center; gap: 8px; }
 }

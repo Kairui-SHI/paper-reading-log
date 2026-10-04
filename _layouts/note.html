@@ -2,10 +2,7 @@
 layout: default
 ---
 <article class="note-page">
-  <div class="note-toolbar">
-    <a class="back-link" href="{{ '/' | relative_url }}">← 返回阅读记录</a>
-    <a class="edit-link" href="https://github.com/Kairui-SHI/paper-reading-log/edit/main/{{ page.path }}">在 GitHub 编辑</a>
-  </div>
+  <a class="back-link" href="{{ '/' | relative_url }}">← 返回阅读记录</a>
   <header class="note-header">
     <div class="note-kicker">
       <time datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | date: "%Y · %m · %d" }}</time>
