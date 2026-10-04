@@ -83,14 +83,10 @@ footer {
 
 .hero h1 {
   margin: 0;
-  font-size: clamp(2.1rem, 4.2vw, 3.65rem);
-  line-height: 1.25;
-  letter-spacing: -.035em;
-}
-
-.hero h1 em {
-  color: var(--blue);
-  font-style: normal;
+  font-size: clamp(1.65rem, 3vw, 2.5rem);
+  line-height: 1.4;
+  letter-spacing: -.02em;
+  white-space: nowrap;
 }
 
 .ledger {
@@ -155,7 +151,7 @@ footer {
 .back-link { display: inline-block; margin-bottom: 44px; color: var(--blue); text-decoration: none; }
 .note-header { padding-bottom: 44px; border-bottom: 1px solid var(--ink); }
 .note-kicker { display: flex; gap: 18px; color: var(--blue); }
-.note-header h1 { margin: 14px 0 8px; font-size: 1.55rem; line-height: 1.45; letter-spacing: -.01em; }
+.note-header h1 { margin: 14px 0 8px; font-size: 1.2rem; line-height: 1.55; letter-spacing: 0; }
 .authors { color: var(--muted); }
 .note-summary { margin: 32px 0 0; font-size: 1.2rem; }
 .note-actions { margin-top: 24px; display: flex; gap: 14px; }
@@ -179,7 +175,7 @@ footer {
   .site-header, main, footer { width: min(100% - 28px, 1120px); }
   .header-note { display: none; }
   .hero { min-height: auto; padding: 48px 0 40px; }
-  .hero h1 { font-size: clamp(1.9rem, 9vw, 2.7rem); }
+  .hero h1 { font-size: clamp(1.45rem, 7vw, 2rem); white-space: normal; }
   .ledger { margin-bottom: 72px; box-shadow: 5px 5px 0 var(--blue-soft); }
   .section-heading { padding: 20px; }
   .note-card { padding: 24px 20px; grid-template-columns: 56px 1fr; gap: 18px; }
