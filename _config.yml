@@ -20,6 +20,11 @@ defaults:
       layout: note
 
 exclude:
+  - editor
+  - node_modules
+  - package.json
+  - package-lock.json
+  - .editor-drafts
   - README.md
   - templates
   - Gemfile

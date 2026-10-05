@@ -1,0 +1,33 @@
+import {chromium} from '@playwright/test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+const browser=await chromium.launch({executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true});
+const page=await browser.newPage({viewport:{width:1440,height:950}});
+const errors=[];page.on('pageerror',e=>errors.push(e.message));
+let file;
+try {
+ await page.goto('http://127.0.0.1:4317');
+ await page.waitForFunction(()=>document.getElementById('title').value.includes('ContactGen'));
+ await page.locator('#new').click();
+ await page.locator('#title').fill('编辑器验证笔记');
+ await page.locator('#body').fill('## 测试\n\n**中文**\n\n$$a_b^2$$\n\n<script>alert(1)</script>');
+ assert.equal(await page.locator('#preview-body strong').textContent(),'中文');
+ assert.equal(await page.locator('#preview-body .katex').count(),1);
+ assert.equal(await page.locator('#preview-body script').count(),0);
+ await page.locator('#save').click();
+ await page.waitForFunction(()=>document.getElementById('state').textContent==='草稿已保存');
+ const listing=await (await page.request.get('http://127.0.0.1:4317/api/notes')).json();
+ const draft=listing.notes.find(n=>n.metadata.title==='编辑器验证笔记');file=draft.file;
+ assert.equal(draft.draft,true);
+ const blocked=await page.request.post('http://127.0.0.1:4317/api/save',{data:{}});assert.equal(blocked.status(),403);
+ const stale=await page.request.post('http://127.0.0.1:4317/api/save',{headers:{Origin:'http://127.0.0.1:4317','X-Editor-Session':listing.session},data:{...draft,version:'old'}});assert.equal(stale.status(),409);
+ await page.reload();await page.waitForFunction(()=>document.getElementById('state').textContent!=='正在载入');
+ await page.locator('#search').fill('编辑器验证');await page.locator('.note-item').click();assert.equal(await page.locator('#title').inputValue(),'编辑器验证笔记');
+ await page.locator('#search').fill('');
+ await page.locator('.note-item').filter({hasText:'ContactGen'}).click();
+ await page.screenshot({path:'I:/Codex/visualizations/2026/10/05/01a10e13-a2c7-7531-8ea9-f4e462b87443/reading-editor.png',fullPage:true});
+ await page.setViewportSize({width:390,height:844});
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+ assert.deepEqual(errors,[]);
+ console.log('Passed: existing note, preview, math, sanitization, draft save/reload, search, conflict guard, origin guard, mobile width.');
+} finally {await browser.close();if(file)await fs.rm(new URL(`../.editor-drafts/${file}`,import.meta.url),{force:true});}

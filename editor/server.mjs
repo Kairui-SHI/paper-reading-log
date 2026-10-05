@@ -1,0 +1,107 @@
+import http from 'node:http';
+import path from 'node:path';
+import fs from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { randomUUID } from 'node:crypto';
+import YAML from 'yaml';
+
+const exec = promisify(execFile);
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const port = Number(process.env.PORT || 4317);
+const origin = `http://127.0.0.1:${port}`;
+const session = randomUUID();
+let busy = false;
+const git = (...args) => exec('git', args, { cwd: root, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } });
+const read = async p => { try { return await fs.readFile(p, 'utf8'); } catch (e) { if (e.code === 'ENOENT') return null; throw e; } };
+function filename(value) {
+  if (!/^[\p{L}\p{N}][\p{L}\p{N}_.-]*\.md$/u.test(value || '') || value.includes('..')) throw new Error('文件名无效');
+  return value;
+}
+export function parseNote(source) {
+  const match = source.replace(/^\uFEFF/, '').match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)([\s\S]*)$/);
+  if (!match) throw new Error('笔记缺少 YAML 标题信息');
+  const metadata = YAML.parse(match[1]);
+  if (!metadata || typeof metadata !== 'object') throw new Error('标题信息无效');
+  return { metadata, body: match[2].replace(/^\r?\n/, '') };
+}
+export function serializeNote(note) {
+  const m = note.metadata;
+  if (!m || typeof m.title !== 'string' || !m.title.trim()) throw new Error('请填写标题');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(m.date || '') || new Date(`${m.date}T12:00:00Z`).toISOString().slice(0,10) !== m.date) throw new Error('日期无效');
+  return `---\n${YAML.stringify(m)}---\n\n${note.body || ''}\n`;
+}
+async function notes() {
+  const saved = (await fs.readdir(path.join(root, '_notes'))).filter(f => f.endsWith('.md'));
+  await fs.mkdir(path.join(root, '.editor-drafts'), { recursive: true });
+  const drafts = (await fs.readdir(path.join(root, '.editor-drafts'))).filter(f => f.endsWith('.md'));
+  return Promise.all([...new Set([...saved, ...drafts])].map(async file => {
+    const draft = await read(path.join(root, '.editor-drafts', file));
+    const source = draft ?? await read(path.join(root, '_notes', file));
+    return { file, ...parseNote(source), draft: draft !== null, version: source };
+  }));
+}
+async function publish(file, source, token) {
+  const target = path.join(root, '_notes', file);
+  if (token) {
+    const url = `https://api.github.com/repos/kairui-shi/paper-reading-log/contents/_notes/${encodeURIComponent(file)}`;
+    const headers = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json', 'User-Agent': 'paper-reading-log-editor' };
+    const current = await fetch(`${url}?ref=main`, { headers });
+    if (!current.ok && current.status !== 404) throw new Error('GitHub 连接失败，请检查令牌与仓库权限');
+    const existing = current.ok ? await current.json() : null;
+    if (existing) {
+      const local = await read(target);
+      if (local === null || Buffer.from(existing.content, 'base64').toString('utf8').replace(/\r\n/g,'\n') !== local.replace(/\r\n/g,'\n')) throw new Error('远程笔记已变化，请先同步仓库再发布');
+    }
+    const result = await fetch(url, { method: 'PUT', headers, body: JSON.stringify({ message: `Update reading note: ${file}`, content: Buffer.from(source).toString('base64'), branch: 'main', ...(existing ? {sha:existing.sha} : {}) }) });
+    if (!result.ok) throw new Error('发布失败，请检查令牌是否有 Contents 写入权限，或同步后重试');
+    await fs.writeFile(target, source);
+    return;
+  }
+  const status = (await git('status', '--porcelain')).stdout;
+  if (status.trim()) throw new Error('仓库有未提交修改。请先处理修改，或使用 GitHub 令牌发布当前笔记');
+  const beforePull = await read(target);
+  await git('pull', '--ff-only', 'origin', 'main');
+  if (await read(target) !== beforePull) throw new Error('远程笔记已变化，请重新载入后编辑');
+  await fs.writeFile(target, source);
+  await git('add', '--', `_notes/${file}`);
+  const changed = (await git('diff', '--cached', '--name-only')).stdout.trim();
+  if (changed) await git('commit', '-m', `Update reading note: ${file}`, '--', `_notes/${file}`);
+  try { await git('push', 'origin', 'main'); } catch { throw new Error('笔记已保存到本地，GitHub 推送未成功。可在发布设置中填入令牌后重试'); }
+}
+export const server = http.createServer(async (req, res) => {
+  const json = (status, data) => { res.writeHead(status, {'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'}); res.end(JSON.stringify(data)); };
+  try {
+    if (req.headers.host !== `127.0.0.1:${port}`) return json(403,{error:'无效访问地址'});
+    const url = new URL(req.url, origin);
+    if (url.pathname.startsWith('/api/')) {
+      if (req.method === 'GET' && url.pathname === '/api/notes') return json(200,{notes:await notes(), session});
+      if (req.method !== 'POST' || req.headers.origin !== origin || req.headers['x-editor-session'] !== session) return json(403,{error:'请刷新编辑器后重试'});
+      if (busy) return json(409,{error:'正在保存或发布，请稍后重试'});
+      let body = ''; for await (const chunk of req) { body += chunk; if (body.length > 2_000_000) throw new Error('笔记过大'); }
+      const data = JSON.parse(body);
+      const file = filename(data.file);
+      const source = serializeNote(data);
+      busy = true;
+      try {
+        const draftPath = path.join(root, '.editor-drafts', file);
+        const current = await read(draftPath) ?? await read(path.join(root, '_notes', file));
+        if (current !== (data.version ?? null)) return json(409,{error:'笔记已被其他窗口修改，请刷新后再编辑'});
+        await fs.mkdir(path.dirname(draftPath), {recursive:true});
+        if (url.pathname === '/api/save') await fs.writeFile(draftPath, source);
+        else if (url.pathname === '/api/publish') { await publish(file, source, data.token); await fs.rm(draftPath,{force:true}); }
+        else return json(404,{error:'接口不存在'});
+        return json(200,{version:source,published:url.pathname === '/api/publish'});
+      } finally { busy = false; }
+    }
+    if (req.method !== 'GET') return json(405,{error:'方法不支持'});
+    let relative = url.pathname === '/' ? 'editor/index.html' : decodeURIComponent(url.pathname).slice(1);
+    if (!/^(editor\/|node_modules\/(marked|dompurify|katex)\/|assets\/)/.test(relative)) return json(404,{error:'文件不存在'});
+    const full = path.resolve(root, relative);
+    if (!full.startsWith(root + path.sep)) return json(403,{error:'路径无效'});
+    const types = {'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.woff2':'font/woff2','.png':'image/png','.jpg':'image/jpeg'};
+    res.writeHead(200,{'Content-Type':types[path.extname(full)] || 'application/octet-stream','X-Content-Type-Options':'nosniff'}); res.end(await fs.readFile(full));
+  } catch(e) { if (!res.headersSent) json(e.code === 'ENOENT' ? 404 : 400,{error:e.message}); else res.end(); }
+});
+if (process.argv[1] === fileURLToPath(import.meta.url)) server.listen(port,'127.0.0.1',()=>console.log(`Reading editor: ${origin}`));

@@ -1,0 +1,8 @@
+{
+  "name": "paper-reading-log-editor",
+  "private": true,
+  "type": "module",
+  "scripts": { "start": "node editor/server.mjs", "test": "node --test editor/*.test.mjs" },
+  "dependencies": { "dompurify": "^3.3.0", "katex": "^0.16.22", "marked": "^16.0.0", "yaml": "^2.8.0" },
+  "devDependencies": { "@playwright/test": "^1.56.0" }
+}
