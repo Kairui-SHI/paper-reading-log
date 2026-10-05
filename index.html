@@ -9,6 +9,24 @@ title: 阅读记录
   </div>
 </section>
 
+<section class="reading-calendar" aria-labelledby="calendar-title">
+  <div class="calendar-heading">
+    <div><p class="eyebrow">READING DAYS</p><h2 id="calendar-title">当月阅读日历</h2></div>
+    <span class="calendar-legend"><i aria-hidden="true"></i> 有阅读记录</span>
+  </div>
+  <div class="calendar-weekdays" aria-hidden="true"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+  <div id="calendar-days" class="calendar-days" aria-label="当月日期"></div>
+  <p id="calendar-summary" class="calendar-summary" aria-live="polite"></p>
+  <noscript><p>启用 JavaScript 后可查看当月阅读日历。</p></noscript>
+</section>
+<script id="calendar-notes" type="application/json">[
+{% assign calendar_notes = site.notes | sort: 'date' | reverse %}
+{% for note in calendar_notes %}
+{"date": {{ note.date | date: '%Y-%m-%d' | jsonify }}, "title": {{ note.title | jsonify }}, "url": {{ note.url | relative_url | jsonify }}}{% unless forloop.last %},{% endunless %}
+{% endfor %}
+]</script>
+<script src="{{ '/assets/js/calendar.js' | relative_url }}" defer></script>
+
 <section class="ledger" aria-labelledby="notes-title">
   <div class="section-heading">
     <div>
@@ -22,7 +40,7 @@ title: 阅读记录
   {% if notes.size > 0 %}
     <div class="note-list">
       {% for note in notes %}
-        <article class="note-card">
+        <article class="note-card" id="note-{{ forloop.index }}">
           <time datetime="{{ note.date | date_to_xmlschema }}">
             <strong>{{ note.date | date: "%d" }}</strong>
             <span>{{ note.date | date: "%Y.%m" }}</span>
