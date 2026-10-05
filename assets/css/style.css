@@ -11,6 +11,13 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
+.note-search { padding: 16px 30px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
+.note-search label { color: var(--muted); font-size: .8rem; }
+.note-search input { flex: 1; min-width: 160px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 4px; background: var(--paper); color: var(--ink); font: .85rem var(--serif); }
+.note-search input:focus { outline: 2px solid var(--blue-soft); border-color: var(--blue); }
+#search-count { color: var(--muted); font-size: .75rem; }
+.search-empty { padding: 36px 30px; margin: 0; color: var(--muted); }
 
 html { scroll-behavior: smooth; }
 

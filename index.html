@@ -42,11 +42,17 @@ title: 阅读记录
     <span class="note-count">{{ site.notes | size }} NOTES</span>
   </div>
 
+  <div class="note-search">
+    <label for="note-search">关键词搜索</label>
+    <input id="note-search" type="search" placeholder="搜索标题、标签或正文…" aria-controls="reading-note-list" autocomplete="off">
+    <span id="search-count" role="status" aria-live="polite"></span>
+  </div>
+  <p id="search-empty" class="search-empty" hidden>没有匹配的阅读记录，试试其他关键词。</p>
   {% assign notes = site.notes | sort: "date" | reverse %}
   {% if notes.size > 0 %}
-    <div class="note-list">
+    <div class="note-list" id="reading-note-list">
       {% for note in notes %}
-        <article class="note-card" id="note-{{ forloop.index }}">
+        <article class="note-card" id="note-{{ forloop.index }}" data-search="{{ note.title | escape }} {{ note.tags | join: ' ' | escape }} {{ note.authors | escape }} {{ note.summary | escape }} {{ note.content | strip_html | escape }}">
           <time datetime="{{ note.date | date_to_xmlschema }}">
             <strong>{{ note.date | date: "%d" }}</strong>
             <span>{{ note.date | date: "%Y.%m" }}</span>
@@ -73,3 +79,4 @@ title: 阅读记录
     </div>
   {% endif %}
 </section>
+<script src="{{ '/assets/js/search.js' | relative_url }}" defer></script>

@@ -5,8 +5,11 @@ const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(
 function state(text,error=false) { $('state').textContent=text; $('state').classList.toggle('error',error); }
 function renderList() {
   $('list').replaceChildren();
-  const query = $('search').value.toLowerCase();
-  const filtered = notes.filter(n => String(n.metadata.title).toLowerCase().includes(query)).sort((a,b)=>String(b.metadata.date).localeCompare(String(a.metadata.date)));
+  const keywords = $('search').value.normalize('NFKC').toLowerCase().trim().split(/\s+/).filter(Boolean);
+  const filtered = notes.filter(n => {
+    const text = [n.metadata.title, n.metadata.authors, ...(n.metadata.tags || []), n.metadata.summary, n.body].join(' ').normalize('NFKC').toLowerCase();
+    return keywords.every(keyword => text.includes(keyword));
+  }).sort((a,b)=>String(b.metadata.date).localeCompare(String(a.metadata.date)));
   for (const note of filtered) {
     const item = document.createElement('button'); item.className='note-item' + (note.file === current?.file ? ' active' : '');
     const date = document.createElement('span'); date.textContent=`${note.metadata.date}${note.draft ? ' · 草稿' : ''}`;
