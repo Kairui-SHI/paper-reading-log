@@ -2,6 +2,7 @@
 layout: default
 title: 阅读记录
 ---
+<div class="home-intro">
 <section class="hero">
   <div>
     <p class="eyebrow">A PERSONAL RESEARCH INDEX</p>
@@ -19,6 +20,7 @@ title: 阅读记录
   <p id="calendar-summary" class="calendar-summary" aria-live="polite"></p>
   <noscript><p>启用 JavaScript 后可查看当月阅读日历。</p></noscript>
 </section>
+</div>
 <script id="calendar-notes" type="application/json">[
 {% assign calendar_notes = site.notes | sort: 'date' | reverse %}
 {% for note in calendar_notes %}
