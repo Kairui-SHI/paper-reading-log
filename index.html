@@ -18,7 +18,7 @@ title: 阅读记录
       <button id="calendar-next" type="button" aria-label="下个月">›</button>
     </div>
   </div>
-  <div class="calendar-tools"><span class="calendar-legend"><i aria-hidden="true"></i> 有阅读记录</span><button id="calendar-today" type="button">回到本月</button></div>
+  <div class="calendar-tools"><div class="calendar-legends"><span class="calendar-legend"><i class="reading-dot" aria-hidden="true"></i> 阅读</span><span class="calendar-legend"><i class="exercise-dot" aria-hidden="true"></i> 锻炼</span><span class="calendar-legend"><i class="piano-dot" aria-hidden="true"></i> 练琴</span></div><button id="calendar-today" type="button">回到本月</button></div>
   <div class="calendar-weekdays" aria-hidden="true"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
   <div id="calendar-days" class="calendar-days" aria-label="当月日期"></div>
   <p id="calendar-summary" class="calendar-summary" aria-live="polite"></p>
@@ -31,6 +31,7 @@ title: 阅读记录
 {"date": {{ note.date | date: '%Y-%m-%d' | jsonify }}, "title": {{ note.title | jsonify }}, "url": {{ note.url | relative_url | jsonify }}}{% unless forloop.last %},{% endunless %}
 {% endfor %}
 ]</script>
+<script id="calendar-activities" type="application/json">{{ site.data.activities | jsonify }}</script>
 <script src="{{ '/assets/js/calendar.js' | relative_url }}" defer></script>
 
 <section class="ledger" aria-labelledby="notes-title">

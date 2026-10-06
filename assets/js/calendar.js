@@ -1,5 +1,6 @@
 (() => {
   const notes = JSON.parse(document.getElementById('calendar-notes').textContent);
+  const activities = JSON.parse(document.getElementById('calendar-activities').textContent) || {};
   const now = new Date();
   let displayed = new Date(now.getFullYear(), now.getMonth(), 1);
   const grid = document.getElementById('calendar-days');
@@ -25,7 +26,14 @@
       const entries = monthNotes.filter(note => note.date === date);
       const cell = document.createElement(entries.length ? 'a' : 'span');
       cell.className = 'calendar-day';
-      cell.textContent = day;
+      const number = document.createElement('span');
+      number.className = 'calendar-day-number';
+      number.textContent = day;
+      cell.append(number);
+      const activity = activities[date] || {};
+      cell.style.setProperty('--reading-color', entries.length ? 'var(--blue)' : 'var(--activity-empty)');
+      cell.style.setProperty('--exercise-color', activity.exercise ? 'var(--exercise)' : 'var(--activity-empty)');
+      cell.style.setProperty('--piano-color', activity.piano ? 'var(--piano)' : 'var(--activity-empty)');
       if (isCurrentMonth && day === now.getDate()) {
         cell.classList.add('is-today');
         cell.setAttribute('aria-current', 'date');
@@ -35,10 +43,15 @@
         cell.href = entries.length === 1 ? entries[0].url : `#note-${notes.findIndex(note => note.date === date) + 1}`;
         cell.title = entries.map(note => note.title).join('\n');
       }
-      cell.setAttribute('aria-label', `${year} 年 ${month + 1} 月 ${day} 日${entries.length ? `，${entries.length} 篇阅读记录：${entries.map(note => note.title).join('、')}` : '，暂无记录'}`);
+      const exerciseLabel = activity.exercise === true ? '已锻炼' : activity.exercise === false ? '未锻炼' : '锻炼未记录';
+      const pianoLabel = activity.piano === true ? '已练琴' : activity.piano === false ? '未练琴' : '练琴未记录';
+      const label = `${year} 年 ${month + 1} 月 ${day} 日${entries.length ? `，${entries.length} 篇阅读记录：${entries.map(note => note.title).join('、')}` : '，暂无阅读记录'}，${exerciseLabel}，${pianoLabel}`;
+      cell.setAttribute('aria-label', label);
+      cell.title = label;
       grid.append(cell);
     }
-    document.getElementById('calendar-summary').textContent = `${isCurrentMonth ? '本月' : '该月'}已记录 ${new Set(monthNotes.map(note => note.date)).size} 天 · ${monthNotes.length} 篇笔记`;
+    const monthActivities = Object.entries(activities).filter(([date]) => date.startsWith(prefix)).map(([,value]) => value);
+    document.getElementById('calendar-summary').textContent = `${isCurrentMonth ? '本月' : '该月'}阅读 ${new Set(monthNotes.map(note => note.date)).size} 天 · 锻炼 ${monthActivities.filter(a => a.exercise).length} 天 · 练琴 ${monthActivities.filter(a => a.piano).length} 天`;
   }
   document.getElementById('calendar-prev').addEventListener('click', () => {
     displayed = new Date(displayed.getFullYear(), displayed.getMonth() - 1, 1);

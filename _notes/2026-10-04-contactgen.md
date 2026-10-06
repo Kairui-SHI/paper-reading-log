@@ -1,6 +1,6 @@
 ---
 title: "ContactGen: Generative Contact Modeling for Grasp Generation"
-date: 2026-10-04
+date: 2026-10-06
 authors: Shaowei Liu, Yang Zhou, Jimei Yang, Saurabh Gupta, Shenlong Wang
 paper_url: https://arxiv.org/abs/2310.03740
 code_url: https://github.com/stevenlsw/contactgen
@@ -8,7 +8,7 @@ tags:
   - 3D Vision
   - Grasp Generation
   - Contact Modeling
-status: 准备阅读
+status: 已读完
 summary: 以物体为中心表示手与物体的接触关系，再通过条件生成模型和基于模型的优化生成多样且几何可行的抓取姿态。
 ---
 
