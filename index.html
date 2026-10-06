@@ -32,7 +32,7 @@ title: 阅读记录
 {% endfor %}
 ]</script>
 <script id="calendar-activities" type="application/json">{{ site.data.activities | jsonify }}</script>
-<script src="{{ '/assets/js/calendar.js' | relative_url }}" defer></script>
+<script src="{{ '/assets/js/calendar.js' | relative_url }}?v={{ site.time | date: '%s' }}" defer></script>
 
 <section class="ledger" aria-labelledby="notes-title">
   <div class="section-heading">
@@ -80,4 +80,4 @@ title: 阅读记录
     </div>
   {% endif %}
 </section>
-<script src="{{ '/assets/js/search.js' | relative_url }}" defer></script>
+<script src="{{ '/assets/js/search.js' | relative_url }}?v={{ site.time | date: '%s' }}" defer></script>
