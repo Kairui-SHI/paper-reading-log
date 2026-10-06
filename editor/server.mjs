@@ -53,6 +53,36 @@ export async function githubError(response) {
   if (status === 422) return 'GitHub 422：提交被拒绝，请检查分支保护规则或稍后重试';
   return `GitHub ${status}：发布请求失败，请稍后重试`;
 }
+export function activitySource(source, data) {
+  serializeNote({metadata:{title:'活动',date:data.date}});
+  if(typeof data.exercise !== 'boolean' || typeof data.piano !== 'boolean') throw new Error('活动状态无效');
+  const activities=YAML.parse(source || '') || {};
+  activities[data.date]={...(activities[data.date] || {}),exercise:data.exercise,piano:data.piano};
+  return YAML.stringify(activities);
+}
+async function saveActivities(data) {
+  const target=path.join(root,'_data','activities.yml');
+  const current=await read(target);
+  if(current !== (data.version ?? null)) throw new Error('活动记录已更新，请重新载入后再保存');
+  const source=activitySource(current,data);
+  if(data.publish) {
+    if(!data.token) throw new Error('请先在发布设置填写 GitHub 令牌；也可以先保存到本地');
+    const url='https://api.github.com/repos/kairui-shi/paper-reading-log/contents/_data/activities.yml';
+    const headers={Authorization:`Bearer ${data.token}`,Accept:'application/vnd.github+json','Content-Type':'application/json','User-Agent':'paper-reading-log-editor'};
+    const response=await fetch(`${url}?ref=main`,{headers});
+    if(!response.ok && response.status!==404) throw new Error(await githubError(response));
+    const existing=response.ok ? await response.json() : null;
+    if(existing) {
+      const remote=Buffer.from(existing.content,'base64').toString('utf8').replace(/\r\n/g,'\n');
+      let base=null;try{base=(await git('show','origin/main:_data/activities.yml')).stdout.replace(/\r\n/g,'\n');}catch{}
+      if(remote !== current?.replace(/\r\n/g,'\n') && remote !== base) throw new Error('远程活动记录已变化，请先同步仓库');
+    }
+    const result=await fetch(url,{method:'PUT',headers,body:JSON.stringify({message:`Update activities: ${data.date}`,content:Buffer.from(source).toString('base64'),branch:'main',...(existing?{sha:existing.sha}:{})})});
+    if(!result.ok) throw new Error(await githubError(result));
+  }
+  await fs.mkdir(path.dirname(target),{recursive:true});await fs.writeFile(target,source);
+  return {version:source,activities:YAML.parse(source),published:!!data.publish};
+}
 async function publish(file, source, token) {
   const target = path.join(root, '_notes', file);
   if (token) {
@@ -91,10 +121,12 @@ export const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, origin);
     if (url.pathname.startsWith('/api/')) {
       if (req.method === 'GET' && url.pathname === '/api/notes') return json(200,{notes:await notes(), session});
+      if (req.method === 'GET' && url.pathname === '/api/activities') {const version=await read(path.join(root,'_data','activities.yml'));return json(200,{version,activities:YAML.parse(version || '') || {},session});}
       if (req.method !== 'POST' || req.headers.origin !== origin || req.headers['x-editor-session'] !== session) return json(403,{error:'请刷新编辑器后重试'});
       if (busy) return json(409,{error:'正在保存或发布，请稍后重试'});
       let body = ''; for await (const chunk of req) { body += chunk; if (body.length > 2_000_000) throw new Error('笔记过大'); }
       const data = JSON.parse(body);
+      if(url.pathname === '/api/activities') {busy=true;try{return json(200,await saveActivities(data));}finally{busy=false;}}
       const file = filename(data.file);
       const source = serializeNote(data);
       busy = true;
