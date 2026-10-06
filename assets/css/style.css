@@ -169,6 +169,16 @@ footer {
 .note-content { padding: 36px 0; }
 .note-content h2 { margin-top: 48px; font-size: 1.35rem; }
 .note-content a { color: var(--blue); }
+.note-content h3 { margin-top: 32px; font-size: 1.12rem; }
+.note-content h4 { margin-top: 26px; font-size: 1rem; }
+.note-content li { margin-bottom: 8px; }
+.note-content blockquote { margin: 24px 0; padding: 10px 20px; border-left: 3px solid var(--blue); background: #eef2ff; }
+.note-content blockquote p { margin: 6px 0; }
+.note-content table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; margin: 24px 0; font-size: .9rem; }
+.note-content th, .note-content td { padding: 12px 16px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+.note-content th { background: var(--blue-soft); }
+.note-content code { font-size: .85em; overflow-wrap: anywhere; }
+.note-content pre { overflow-x: auto; }
 .tag-row { padding-top: 22px; display: flex; flex-wrap: wrap; gap: 10px; border-top: 1px solid var(--line); color: var(--muted); font: .78rem var(--mono); }
 
 footer {

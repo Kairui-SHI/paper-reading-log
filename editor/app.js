@@ -1,5 +1,6 @@
 const $ = id => document.getElementById(id);
 let notes = [], current = null, session, dirty = false, pending = false;
+let formatBackup = null;
 const fields = ['title','date','status','paper_url','authors','tags','summary','code_url'];
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
 function state(text,error=false) { $('state').textContent=text; $('state').classList.toggle('error',error); }
@@ -19,6 +20,7 @@ function renderList() {
   if (!filtered.length) $('list').textContent='还没有匹配的笔记。';
 }
 function openNote(note) {
+  formatBackup=null; $('undo-format').disabled=true;
   current=structuredClone(note); dirty=false;
   for (const field of fields) $(field).value = field === 'tags' ? (note.metadata.tags || []).join(', ') : note.metadata[field] || '';
   if (note.metadata.status && !$('status').value) { const option=new Option(note.metadata.status,note.metadata.status); $('status').add(option); $('status').value=note.metadata.status; }
@@ -82,7 +84,7 @@ async function save(publish=false) {
   state(publish?'正在发布…':'正在保存…');
   let data=collect();
   const baseline=structuredClone(current);
-  const controls = [...[...fields,'body'].map($), ...document.querySelectorAll('[data-insert]')];
+  const controls = [...[...fields,'body'].map($), ...document.querySelectorAll('[data-insert]'), $('format-note')];
   controls.forEach(control => control.disabled=true);
   try {
     async function request() {
@@ -116,6 +118,18 @@ $('new').onclick=()=>{if(!dirty || confirm('当前内容尚未保存，是否离
 $('search').oninput=renderList;
 for(const field of [...fields,'body']) $(field).addEventListener('input',changed);
 $('save').onclick=()=>save(); $('publish').onclick=()=>save(true);
+$('format-note').onclick=()=>{
+  const original=$('body').value;
+  const formatted=formatReadingNote(original);
+  if(formatted===original){state('格式已经整齐');return;}
+  formatBackup={file:current.file,body:original};
+  $('body').value=formatted;$('undo-format').disabled=false;changed();state('已整理格式 · 可撤销，确认后保存');
+};
+$('undo-format').onclick=()=>{
+  if(!formatBackup || formatBackup.file!==current.file || pending)return;
+  if(dirty && !confirm('恢复整理前的正文？整理后的新修改也会撤销。'))return;
+  $('body').value=formatBackup.body;formatBackup=null;$('undo-format').disabled=true;changed();state('已恢复整理前的正文');
+};
 $('settings').onclick=()=>$('settings-dialog').showModal(); $('close-settings').onclick=()=>$('settings-dialog').close();
 document.querySelectorAll('[data-insert]').forEach(button=>button.onclick=()=>{const area=$('body');area.setRangeText(button.dataset.insert,area.selectionStart,area.selectionEnd,'end');area.focus();changed();});
 document.addEventListener('keydown',e=>{if((e.ctrlKey || e.metaKey)&&e.key==='s'){e.preventDefault();save();}});

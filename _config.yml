@@ -25,6 +25,7 @@ exclude:
   - package.json
   - package-lock.json
   - .editor-drafts
+  - .editor-backups
   - README.md
   - templates
   - Gemfile

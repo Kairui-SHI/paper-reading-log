@@ -19,42 +19,72 @@ summary: 以物体为中心表示手与物体的接触关系，再通过条件�
 - [项目主页](https://stevenlsw.github.io/contactgen/)
 - [官方代码](https://github.com/stevenlsw/contactgen)
 
-我用文字写了你再跟我梳理格式吧。
-词语积累: concise, comprehensive,  contact representation for hand-object interaction
-underlying 潜在的 (观测背后真正决定它的东西)
-comprises three components
-predict diverse and geometrically feasible grasps
-gained substantial importance across various domains
-HOI for animation, games, and augmented and virtual reality
-**address the aforementioned challenges [句中连词]**
+## 词语与表达积累
 
-行文方法：
+| 词语 / 表达 | 我的理解或备注 |
+| --- | --- |
+| concise | — |
+| comprehensive | — |
+| contact representation for hand-object interaction | — |
+| underlying | 潜在的：观测背后真正决定它的东西。 |
+| comprises three components | — |
+| predict diverse and geometrically feasible grasps | — |
+| gained substantial importance across various domains | — |
+| HOI for animation, games, and augmented and virtual reality | — |
+| address the aforementioned challenges | 句中衔接表达。 |
 
-abstract：
-1. This paper present a novel [method] for [领域？目标？] 我认为目标比较合适，什么方法，为了什么。方法是创新，用在什么领域一句话点明。
-2. [method] 核心亮点
-3. pipelien 实现路径
-4. 实验 demonstrate ...
-四句话解决。
+## 行文方法
 
-Introduction:
+### Abstract：四句话完成摘要
 
-一: (modeling 这个真的很重要 for 领域A 对应abs第一句话)
-1. modeling 这个为什么重要 [high-level]
-2. For instance, 给个例子大家理解
-3. 为了实现这个重要的事情，需要一个什么 [紧扣本文提出的核心亮点]
-4. 展开具体讲一下上面那个[核心亮点]是什么，因为只有一个词，需要一些例子和一些拆开的通俗解释告诉大家怎么做。 e.g. precise contact prediction [核心亮点] -> 解释: contact probability map [precise] of hand contact region to the object surface [contact], e.g. which parts of the hand will touch the object
-或者: A thorough contact modeling should account for factors such as (举例子展开)
+1. **方法与目标**：`This paper presents a novel [method] for [领域？目标？]`。
+   我认为这里写“目标”比较合适：什么方法，为了什么。方法是创新，用在什么领域，一句话点明。
+2. **核心亮点**：说明 `[method]` 的核心亮点。
+3. **实现路径**：交代 pipeline。
+4. **实验验证**：用 `demonstrate ...` 说明实验结果。
 
-二: (大家也modeling，但是他们的method不好、他们的representation方式不好)
-1. Previous approaches often rely on [what 短板], which [解释这个短板是什么，数学上、理论上、通俗的解释]。
-2. **但是**！ [短板] 为什么是短板。
-3. **Specifically**, 解释一下短板为什么是短板这句话，上一句话是给出的结论，可能有一些含糊的词例如 [lacks details/ lacks ability ...] 这里要具体解释为什么有了短板，还有这些问题。
-4. **Moreover**, 再加一句加强一下
+> 四句话解决。
 
-三: (引出自己核心观点: 我们的好)
-1. In this paper, we address the aforementioned challenges [句中连词] ...
+### Introduction：逐段展开故事
 
-四: (模型其他细节，支撑完成整个故事)
+#### 第一段：为什么这个 modeling 很重要
 
+对应 abstract 第一句：modeling 对领域 A 很重要。
 
+1. **说明重要性**：从 high-level 讲 modeling 为什么重要。
+2. **给出例子**：用 `For instance, ...` 帮助大家理解。
+3. **引出需要什么**：为了实现这件重要的事情，需要什么？紧扣本文提出的核心亮点。
+4. **拆开解释核心亮点**：只有一个词还不够，需要例子和通俗解释，告诉大家具体怎么做。
+
+例如，把 **precise contact prediction** 拆开：
+
+- **precise** → contact probability map。
+- **contact** → hand contact region to the object surface。
+- 再给一个通俗例子：`which parts of the hand will touch the object`。
+
+也可以用下面的句式展开：
+
+> A thorough contact modeling should account for factors such as ...
+
+后面举例说明需要考虑的因素。
+
+#### 第二段：已有方法有什么短板
+
+大家也在做 modeling，但是他们的 method 或 representation 方式存在问题。
+
+1. **指出短板**：`Previous approaches often rely on [短板], which [解释]`。从数学、理论或通俗的角度解释这个短板是什么。
+2. **转折**：但是，这个短板为什么构成问题？
+3. **具体解释**：用 **Specifically** 展开。上一句给出结论，可能包含 `lacks details`、`lacks ability` 等含糊表达；这里要具体说明短板为什么会带来这些问题。
+4. **进一步加强**：用 **Moreover** 再加一句。
+
+#### 第三段：引出自己的核心观点
+
+说明“我们的方法好在哪里”，回应前面的问题：
+
+> In this paper, we address the aforementioned challenges ...
+
+其中 **address the aforementioned challenges** 用来衔接上文。
+
+#### 第四段：补充模型细节
+
+介绍其他模型细节，支撑并完成整个故事。

@@ -42,20 +42,34 @@ async function notes() {
     return { file, ...parseNote(source), draft: draft !== null, version: source };
   }));
 }
+export async function githubError(response) {
+  let message = ''; try { message = (await response.json()).message || ''; } catch {}
+  const status = response.status;
+  if (status === 401) return 'GitHub 401：令牌无效或已过期，请重新填写有效令牌';
+  if (status === 403 && /rate limit/i.test(message)) return 'GitHub 403：请求额度已用完，请稍后重试';
+  if (status === 403) return 'GitHub 403：令牌没有此仓库的 Contents 写入权限，或仓库规则禁止直接发布';
+  if (status === 404) return 'GitHub 404：令牌无法写入此仓库，请确认授权了 kairui-shi/paper-reading-log，并开启 Contents 读写权限';
+  if (status === 409) return 'GitHub 409：远程笔记在发布期间发生变化，请重新同步后重试';
+  if (status === 422) return 'GitHub 422：提交被拒绝，请检查分支保护规则或稍后重试';
+  return `GitHub ${status}：发布请求失败，请稍后重试`;
+}
 async function publish(file, source, token) {
   const target = path.join(root, '_notes', file);
   if (token) {
     const url = `https://api.github.com/repos/kairui-shi/paper-reading-log/contents/_notes/${encodeURIComponent(file)}`;
     const headers = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json', 'User-Agent': 'paper-reading-log-editor' };
     const current = await fetch(`${url}?ref=main`, { headers });
-    if (!current.ok && current.status !== 404) throw new Error('GitHub 连接失败，请检查令牌与仓库权限');
+    if (!current.ok && current.status !== 404) throw new Error(await githubError(current));
     const existing = current.ok ? await current.json() : null;
     if (existing) {
       const local = await read(target);
-      if (local === null || Buffer.from(existing.content, 'base64').toString('utf8').replace(/\r\n/g,'\n') !== local.replace(/\r\n/g,'\n')) throw new Error('远程笔记已变化，请先同步仓库再发布');
+      const remote = Buffer.from(existing.content, 'base64').toString('utf8').replace(/\r\n/g,'\n');
+      let upstream = null;
+      try { upstream = (await git('show', `origin/main:_notes/${file}`)).stdout.replace(/\r\n/g,'\n'); } catch {}
+      if (remote !== local?.replace(/\r\n/g,'\n') && remote !== upstream) throw new Error('远程笔记已变化，请先同步仓库再发布');
     }
     const result = await fetch(url, { method: 'PUT', headers, body: JSON.stringify({ message: `Update reading note: ${file}`, content: Buffer.from(source).toString('base64'), branch: 'main', ...(existing ? {sha:existing.sha} : {}) }) });
-    if (!result.ok) throw new Error('发布失败，请检查令牌是否有 Contents 写入权限，或同步后重试');
+    if (!result.ok) throw new Error(await githubError(result));
     await fs.writeFile(target, source);
     return;
   }
