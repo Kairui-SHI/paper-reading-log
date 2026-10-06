@@ -241,12 +241,12 @@ footer {
 .calendar-weekdays { margin-bottom: 10px; color: var(--muted); font-size: .75rem; }
 .calendar-day { position: relative; display: flex; align-items: center; justify-content: center; justify-self: center; width: 32px; height: 32px; min-height: 32px; border-radius: 50%; color: var(--muted); font: 500 .75rem var(--mono); text-decoration: none; transition: transform .15s ease, box-shadow .15s ease; }
 .calendar-day.has-activity { background: conic-gradient(from -60deg, var(--reading-color) 0deg 119deg, #ffffff 119deg 120deg, var(--exercise-color) 120deg 239deg, #ffffff 239deg 240deg, var(--piano-color) 240deg 359deg, #ffffff 359deg 360deg); box-shadow: 0 2px 5px #0c183012; }
-.calendar-day-number { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; color: inherit; }
+.calendar-day-number { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; color: var(--ink); }
 .calendar-day.has-activity { color: var(--ink); }
-.calendar-day.is-complete { color: white; text-shadow: 0 1px 2px #0c183040; }
+.calendar-day.has-activity .calendar-day-number { width: 24px; height: 24px; border-radius: 50%; background: white; }
 .calendar-day.is-today { color: var(--blue); font-weight: 500; }
 .calendar-day.is-today::after { content: ''; position: absolute; bottom: -4px; left: calc(50% - 2px); width: 4px; height: 4px; border-radius: 50%; background: var(--blue); }
-.calendar-day.is-today.is-complete { color: white; }
+.calendar-day.is-today .calendar-day-number { color: var(--blue); }
 .calendar-day.has-notes:hover { transform: translateY(-2px); box-shadow: 0 4px 9px #0c183020; }
 .calendar-day:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }.calendar-summary { margin: 12px 0 0; color: var(--muted); font-size: .8rem; }
 @media (max-width: 700px) {
