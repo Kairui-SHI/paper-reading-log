@@ -32,10 +32,15 @@
       cell.append(number);
       const activity = activities[date] || {};
       if (entries.length || activity.exercise || activity.piano) cell.classList.add('has-activity');
-      if (entries.length && activity.exercise && activity.piano) cell.classList.add('is-complete');
-      cell.style.setProperty('--reading-color', entries.length ? '#446b9e' : 'var(--activity-empty)');
-      cell.style.setProperty('--exercise-color', activity.exercise ? 'var(--exercise)' : 'var(--activity-empty)');
-      cell.style.setProperty('--piano-color', activity.piano ? 'var(--piano)' : 'var(--activity-empty)');
+      const dots = document.createElement('span');
+      dots.className = 'calendar-activity-dots';
+      dots.setAttribute('aria-hidden', 'true');
+      for (const [name, complete] of [['reading', entries.length > 0], ['exercise', activity.exercise === true], ['piano', activity.piano === true]]) {
+        const dot = document.createElement('i');
+        dot.className = `activity-dot ${name}${complete ? ' is-done' : ''}`;
+        dots.append(dot);
+      }
+      if (entries.length || activity.exercise || activity.piano) cell.append(dots);
       if (isCurrentMonth && day === now.getDate()) {
         cell.classList.add('is-today');
         cell.setAttribute('aria-current', 'date');
