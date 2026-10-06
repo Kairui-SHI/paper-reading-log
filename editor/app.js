@@ -27,7 +27,7 @@ function openNote(note) {
 function collect() {
   const metadata={...current.metadata};
   for (const field of fields) metadata[field] = field === 'tags' ? $(field).value.split(/[,，]/).map(s=>s.trim()).filter(Boolean) : $(field).value;
-  return {file:current.file,metadata,body:$('body').value,version:current.version ?? null};
+  return {file:current.file,metadata,body:$('body').value,version:current.version ?? null,baseMetadata:current.baseMetadata || current.metadata};
 }
 function preview() {
   $('preview-title').textContent=$('title').value || '今天的阅读';
@@ -41,21 +41,73 @@ function preview() {
   renderMathInElement($('preview-body'),{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false},{left:'$',right:'$',display:false}],throwOnError:false});
   $('words').textContent=`${$('body').value.replace(/\s/g,'').length} 字`;
 }
-function changed() {dirty=true; state('未保存');preview(); sessionStorage.setItem('reading-unsaved',JSON.stringify(collect()));}
+function changed() {dirty=true; state('未保存');sessionStorage.setItem('reading-unsaved',JSON.stringify(collect()));preview();}
+const same = (a,b) => JSON.stringify(a ?? '') === JSON.stringify(b ?? '');
+const sourceBody = source => (source || '').replace(/^\uFEFF/,'').replace(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/,'').replace(/^\r?\n/,'').replace(/\r\n/g,'\n').trimEnd();
+async function latestNotes() {
+  const response = await fetch('/api/notes');
+  if (!response.ok) throw new Error('无法读取最新笔记，当前文字已保留');
+  const data = await response.json(); session = data.session; return data.notes;
+}
+function mergeLatest(data, baseline, latest) {
+  if (!latest || baseline.recoveredWithoutBaseline) return null;
+  const baseMetadata=baseline.baseMetadata || baseline.metadata;
+  const baseBody = sourceBody(baseline.version);
+  const myBody = data.body.replace(/\r\n/g,'\n').trimEnd();
+  const otherBody = latest.body.replace(/\r\n/g,'\n').trimEnd();
+  if (myBody !== baseBody && otherBody !== baseBody && myBody !== otherBody) return null;
+  const metadata = {...latest.metadata};
+  for (const key of new Set([...Object.keys(baseMetadata), ...Object.keys(data.metadata)])) {
+    if (same(data.metadata[key],baseMetadata[key])) continue;
+    if (!same(latest.metadata[key],baseMetadata[key]) && !same(latest.metadata[key],data.metadata[key])) return null;
+    metadata[key] = data.metadata[key];
+  }
+  return {...data, metadata, body:myBody === baseBody ? latest.body : data.body, version:latest.version};
+}
+function conflictCopy() {
+  let dialog = $('conflict-dialog');
+  if (!dialog) {
+    dialog = document.createElement('dialog'); dialog.id='conflict-dialog';
+    const title=document.createElement('h2');title.textContent='笔记有两份不同的修改';
+    const explanation=document.createElement('p');explanation.textContent='你的文字仍在编辑区。可以保存为一份新的草稿，再与最新笔记对照整理。原笔记不会被覆盖。';
+    const stay=document.createElement('button');stay.textContent='继续编辑';stay.onclick=()=>dialog.close();
+    const copy=document.createElement('button');copy.className='primary';copy.textContent='另存为草稿';copy.onclick=async()=>{dialog.close();current={...current,file:`${$('date').value}-${crypto.randomUUID().slice(0,8)}.md`,version:null,draft:true};dirty=true;sessionStorage.setItem('reading-unsaved',JSON.stringify(collect()));await save();};
+    dialog.append(title,explanation,stay,copy);document.body.append(dialog);
+  }
+  dialog.showModal();
+}
 async function save(publish=false) {
   if(pending || !$('metadata').reportValidity()) return;
   pending=true; $('save').disabled=$('publish').disabled=$('new').disabled=true;
   state(publish?'正在发布…':'正在保存…');
-  const data=collect();
+  let data=collect();
+  const baseline=structuredClone(current);
+  const controls = [...[...fields,'body'].map($), ...document.querySelectorAll('[data-insert]')];
+  controls.forEach(control => control.disabled=true);
   try {
-    const res=await fetch(publish?'/api/publish':'/api/save',{method:'POST',headers:{'Content-Type':'application/json','X-Editor-Session':session},body:JSON.stringify({...data,...(publish ? {token:$('token').value.trim()} : {})})});
-    const result=await res.json(); if(!res.ok) throw new Error(result.error);
-    current={...data,version:result.version,draft:!publish};
+    async function request() {
+      const res=await fetch(publish?'/api/publish':'/api/save',{method:'POST',headers:{'Content-Type':'application/json','X-Editor-Session':session},body:JSON.stringify({...data,...(publish ? {token:$('token').value.trim()} : {})})});
+      return {res,result:await res.json()};
+    }
+    let {res,result}=await request();
+    if (res.status===403) {await latestNotes();({res,result}=await request());}
+    if (res.status===409) {
+      notes=await latestNotes();
+      const latest=notes.find(note=>note.file===data.file);
+      const merged=mergeLatest(data,baseline,latest);
+      if (!merged) {renderList();conflictCopy();throw new Error('修改有冲突，文字已保留，可另存为草稿');}
+      data=merged;
+      ({res,result}=await request());
+    }
+    if(!res.ok) throw new Error(result.error);
+    current={...data,version:result.version,draft:!publish,baseMetadata:data.metadata};
+    for (const field of fields) $(field).value=field==='tags' ? (data.metadata.tags || []).join(', ') : data.metadata[field] || '';
+    $('body').value=data.body;preview();
     const index=notes.findIndex(n=>n.file===current.file); if(index<0) notes.push(current);else notes[index]=current;
-    dirty=JSON.stringify(collect().metadata)!==JSON.stringify(data.metadata) || $('body').value!==data.body;
+    dirty=false;
     if(!dirty) sessionStorage.removeItem('reading-unsaved');
     renderList(); state(dirty?'已保存，仍有新修改':publish?'已发布 · 网站部署后更新':'草稿已保存');
-  } catch(e) {state(e.message,true);} finally {pending=false;$('save').disabled=$('publish').disabled=$('new').disabled=false;}
+  } catch(e) {state(e.message,true);} finally {pending=false;$('save').disabled=$('publish').disabled=$('new').disabled=false;controls.forEach(control=>control.disabled=false);}
 }
 function newNote() {
   const date=today(); openNote({file:`${date}-${crypto.randomUUID().slice(0,8)}.md`,metadata:{title:'',date,status:'阅读中',tags:[]},body:'## 论文讲什么\n\n\n## 关键方法\n\n\n## 我的想法\n\n\n## 还没想明白的问题\n\n',version:null,draft:true}); $('title').focus(); changed();
@@ -68,4 +120,4 @@ $('settings').onclick=()=>$('settings-dialog').showModal(); $('close-settings').
 document.querySelectorAll('[data-insert]').forEach(button=>button.onclick=()=>{const area=$('body');area.setRangeText(button.dataset.insert,area.selectionStart,area.selectionEnd,'end');area.focus();changed();});
 document.addEventListener('keydown',e=>{if((e.ctrlKey || e.metaKey)&&e.key==='s'){e.preventDefault();save();}});
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
-fetch('/api/notes').then(async res=>{if(!res.ok)throw new Error('无法载入笔记');const data=await res.json();notes=data.notes;session=data.session;const recovered=sessionStorage.getItem('reading-unsaved');if(recovered){const note=JSON.parse(recovered);openNote(note);dirty=true;state('已恢复未保存内容');}else if(notes.length)openNote(notes.slice().sort((a,b)=>String(b.metadata.date).localeCompare(String(a.metadata.date)))[0]);else newNote();}).catch(e=>{state(e.message,true);$('save').disabled=$('publish').disabled=true;});
+fetch('/api/notes').then(async res=>{if(!res.ok)throw new Error('无法载入笔记');const data=await res.json();notes=data.notes;session=data.session;const recovered=sessionStorage.getItem('reading-unsaved');if(recovered){const note=JSON.parse(recovered);note.recoveredWithoutBaseline=!note.baseMetadata;openNote(note);dirty=true;state('已恢复未保存内容');}else if(notes.length)openNote(notes.slice().sort((a,b)=>String(b.metadata.date).localeCompare(String(a.metadata.date)))[0]);else newNote();}).catch(e=>{state(e.message,true);$('save').disabled=$('publish').disabled=true;});
