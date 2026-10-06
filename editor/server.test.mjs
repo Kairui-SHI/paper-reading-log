@@ -1,6 +1,15 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {parseNote, serializeNote, githubError} from './server.mjs';
+import {parseNote, serializeNote, githubError, activitySource} from './server.mjs';
+import YAML from 'yaml';
+test('今日打卡保留其他日期，允许取消，不创建阅读记录',()=>{
+ const source='"2026-10-05":\n  exercise: true\n  piano: true\n';
+ const result=YAML.parse(activitySource(source,{date:'2026-10-06',exercise:true,piano:false}));
+ assert.deepEqual(result['2026-10-05'],{exercise:true,piano:true});
+ assert.deepEqual(result['2026-10-06'],{exercise:true,piano:false});
+ assert.equal(YAML.parse(activitySource(YAML.stringify(result),{date:'2026-10-06',exercise:false,piano:false}))['2026-10-06'].exercise,false);
+ assert.throws(()=>activitySource(source,{date:'2026-02-30',exercise:true,piano:true}));
+});
 test('保存后保留未知字段、中文标签、冒号和多行正文',()=>{
  const note={metadata:{title:'论文: "接触"',date:'2026-10-05',tags:['3D Vision','抓取'],custom:{value:true}},body:'## 我的想法\n\n$$a_b$$\n'};
  const parsed=parseNote(serializeNote(note));
