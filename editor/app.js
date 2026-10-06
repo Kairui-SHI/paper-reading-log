@@ -84,7 +84,7 @@ async function save(publish=false) {
   state(publish?'正在发布…':'正在保存…');
   let data=collect();
   const baseline=structuredClone(current);
-  const controls = [...[...fields,'body'].map($), ...document.querySelectorAll('[data-insert]'), $('format-note')];
+  const controls = [...[...fields,'body'].map($), ...document.querySelectorAll('[data-insert]'), $('format-note'), $('restore-note')];
   controls.forEach(control => control.disabled=true);
   try {
     async function request() {
@@ -131,7 +131,41 @@ $('undo-format').onclick=()=>{
   $('body').value=formatBackup.body;formatBackup=null;$('undo-format').disabled=true;changed();state('已恢复整理前的正文');
 };
 $('settings').onclick=()=>$('settings-dialog').showModal(); $('close-settings').onclick=()=>$('settings-dialog').close();
-document.querySelectorAll('[data-insert]').forEach(button=>button.onclick=()=>{const area=$('body');area.setRangeText(button.dataset.insert,area.selectionStart,area.selectionEnd,'end');area.focus();changed();});
+function insertFormatting(pattern) {
+  if(pending)return;
+  const area=$('body');let start=area.selectionStart,end=area.selectionEnd;
+  let selected=area.value.slice(start,end),replacement,selectionStart,selectionEnd;
+  const marker = pattern==='**文字**' ? '**' : pattern==='*文字*' ? '*' : pattern==='`代码`' ? '`' : null;
+  if(marker) {
+    if(selected.startsWith(marker) && selected.endsWith(marker) && selected.length>=marker.length*2) {
+      replacement=selected.slice(marker.length,-marker.length);selectionStart=start;selectionEnd=start+replacement.length;
+    } else if(selected && area.value.slice(start-marker.length,start)===marker && area.value.slice(end,end+marker.length)===marker) {
+      start-=marker.length;end+=marker.length;replacement=selected;selectionStart=start;selectionEnd=start+selected.length;
+    } else {const text=selected || (marker==='`'?'代码':'文字');replacement=marker+text+marker;selectionStart=start+marker.length;selectionEnd=selectionStart+text.length;}
+  } else if(pattern==='## ' || pattern==='- ') {
+    start=area.value.lastIndexOf('\n',start-1)+1;
+    const last=end>start && area.value[end-1]==='\n' ? end-1 : end;
+    const next=area.value.indexOf('\n',last);end=next<0?area.value.length:next;
+    selected=area.value.slice(start,end);replacement=selected.split('\n').map(line=>pattern+line).join('\n');selectionStart=start;selectionEnd=start+replacement.length;
+  } else if(pattern.startsWith('![') || pattern.startsWith('[')) {
+    const prefix=pattern.startsWith('![')?'![':'[';const text=selected || (prefix==='!['?'图片说明':'文字');
+    replacement=prefix+text+'](https://)';selectionStart=start+prefix.length+text.length+2;selectionEnd=selectionStart+8;
+  } else {replacement='$$\n'+(selected || 'E = mc^2')+'\n$$';selectionStart=start+3;selectionEnd=selectionStart+(selected || 'E = mc^2').length;}
+  area.setRangeText(replacement,start,end,'end');area.focus();area.setSelectionRange(selectionStart,selectionEnd);changed();
+}
+document.querySelectorAll('[data-insert]').forEach(button=>{button.addEventListener('mousedown',e=>e.preventDefault());button.onclick=()=>insertFormatting(button.dataset.insert);});
+$('restore-note').onclick=async()=>{
+  if(pending || !current)return;
+  if(!confirm('先备份当前文字，再恢复已保存的版本？'))return;
+  try {
+    const backup=collect();
+    localStorage.setItem(`reading-recovery-${current.file}-${Date.now()}`,JSON.stringify(backup));
+    const latest=await latestNotes();const note=latest.find(n=>n.file===current.file);
+    if(!note)throw new Error('未找到已保存版本，当前文字已备份');
+    notes=latest;sessionStorage.removeItem('reading-unsaved');openNote(note);state('已恢复保存版本 · 原文字已备份');
+  }catch(e){state(e.message,true);}
+};
+document.addEventListener('keydown',e=>{if(document.activeElement===$('body') && (e.ctrlKey || e.metaKey) && ['b','i'].includes(e.key.toLowerCase())){e.preventDefault();insertFormatting(e.key.toLowerCase()==='b'?'**文字**':'*文字*');}});
 document.addEventListener('keydown',e=>{if((e.ctrlKey || e.metaKey)&&e.key==='s'){e.preventDefault();save();}});
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
 fetch('/api/notes').then(async res=>{if(!res.ok)throw new Error('无法载入笔记');const data=await res.json();notes=data.notes;session=data.session;const recovered=sessionStorage.getItem('reading-unsaved');if(recovered){const note=JSON.parse(recovered);note.recoveredWithoutBaseline=!note.baseMetadata;openNote(note);dirty=true;state('已恢复未保存内容');}else if(notes.length)openNote(notes.slice().sort((a,b)=>String(b.metadata.date).localeCompare(String(a.metadata.date)))[0]);else newNote();}).catch(e=>{state(e.message,true);$('save').disabled=$('publish').disabled=true;});
