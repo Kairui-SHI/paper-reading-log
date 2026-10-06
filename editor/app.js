@@ -3,6 +3,30 @@ let notes = [], current = null, session, dirty = false, pending = false;
 let formatBackup = null;
 const fields = ['title','date','status','paper_url','authors','tags','summary','code_url'];
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+let activityVersion=null, activitySession=null, activityDate=today();
+async function loadActivities() {
+  const res=await fetch('/api/activities');if(!res.ok)throw new Error('今日打卡载入失败');
+  const data=await res.json();activityVersion=data.version;activitySession=data.session;activityDate=today();
+  $('activity-date').textContent=activityDate;
+  $('activity-exercise').checked=data.activities[activityDate]?.exercise===true;
+  $('activity-piano').checked=data.activities[activityDate]?.piano===true;
+}
+async function updateActivities(publish) {
+  if(today()!==activityDate){await loadActivities();$('activity-state').textContent='日期已切换，请确认今天的状态再保存';return;}
+  const controls=['activity-save','activity-publish','activity-exercise','activity-piano'].map($);
+  controls.forEach(e=>e.disabled=true);
+  try {
+    $('activity-state').textContent=publish?'正在同步…':'正在保存…';
+    const data={date:activityDate,exercise:$('activity-exercise').checked,piano:$('activity-piano').checked,version:activityVersion,publish,token:publish?$('token').value.trim():undefined};
+    const send=()=>fetch('/api/activities',{method:'POST',headers:{'Content-Type':'application/json','X-Editor-Session':activitySession},body:JSON.stringify(data)});
+    let res=await send();if(res.status===403){const fresh=await(await fetch('/api/activities')).json();activitySession=fresh.session;res=await send();}
+    const result=await res.json();if(!res.ok)throw new Error(result.error);activityVersion=result.version;
+    $('activity-state').textContent=publish?'已同步 · 部署后更新':'已保存到本地';
+  }catch(e){$('activity-state').textContent=e.message;}finally{controls.forEach(e=>e.disabled=false);}
+}
+$('activity-save').onclick=()=>updateActivities(false);$('activity-publish').onclick=()=>updateActivities(true);
+for(const id of ['activity-exercise','activity-piano'])$(id).onchange=()=>$('activity-state').textContent='未保存';
+loadActivities().catch(e=>{$('activity-state').textContent=e.message;$('activity-save').disabled=$('activity-publish').disabled=true;});
 function state(text,error=false) { $('state').textContent=text; $('state').classList.toggle('error',error); }
 function renderList() {
   $('list').replaceChildren();
