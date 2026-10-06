@@ -31,7 +31,9 @@
       number.textContent = day;
       cell.append(number);
       const activity = activities[date] || {};
-      cell.style.setProperty('--reading-color', entries.length ? 'var(--blue)' : 'var(--activity-empty)');
+      if (entries.length || activity.exercise || activity.piano) cell.classList.add('has-activity');
+      if (entries.length && activity.exercise && activity.piano) cell.classList.add('is-complete');
+      cell.style.setProperty('--reading-color', entries.length ? '#446b9e' : 'var(--activity-empty)');
       cell.style.setProperty('--exercise-color', activity.exercise ? 'var(--exercise)' : 'var(--activity-empty)');
       cell.style.setProperty('--piano-color', activity.piano ? 'var(--piano)' : 'var(--activity-empty)');
       if (isCurrentMonth && day === now.getDate()) {
