@@ -215,7 +215,26 @@ $('undo-format').onclick=()=>{
   if(dirty && !confirm('恢复整理前的正文？整理后的新修改也会撤销。'))return;
   $('body').value=formatBackup.body;formatBackup=null;$('undo-format').disabled=true;changed();state('已恢复整理前的正文');
 };
-$('settings').onclick=()=>$('settings-dialog').showModal(); $('close-settings').onclick=()=>$('settings-dialog').close();
+const tokenStorageKey='reading-github-token';
+try{const saved=localStorage.getItem(tokenStorageKey);if(saved){$('token').value=saved;$('remember-token').checked=true;}}
+catch{$('token-storage-state').textContent='浏览器不允许本地存储，令牌仅在本次页面使用';}
+function persistToken(){
+  try{
+    if($('remember-token').checked && $('token').value.trim()){
+      localStorage.setItem(tokenStorageKey,$('token').value.trim());$('token-storage-state').textContent='令牌已保存到此浏览器';
+    }else{localStorage.removeItem(tokenStorageKey);$('token-storage-state').textContent='令牌仅在本次页面使用';}
+    return true;
+  }catch{$('token-storage-state').textContent='保存失败：浏览器不允许本地存储，令牌仍可在本次页面使用';return false;}
+}
+$('remember-token').onchange=persistToken;
+$('token').addEventListener('input',persistToken);
+$('forget-token').onclick=()=>{
+  try{localStorage.removeItem(tokenStorageKey);$('token').value='';$('remember-token').checked=false;$('token-storage-state').textContent='已清除保存的令牌';}
+  catch{$('token-storage-state').textContent='清除失败，请在浏览器设置中清除此网站的数据';}
+};
+$('settings').onclick=()=>$('settings-dialog').showModal();
+$('close-settings').onclick=()=>{if(persistToken())$('settings-dialog').close();};
+$('settings-dialog').addEventListener('cancel',()=>persistToken());
 function insertFormatting(pattern) {
   if(pending)return;
   const area=$('body');let start=area.selectionStart,end=area.selectionEnd;
