@@ -1,6 +1,7 @@
 const $ = id => document.getElementById(id);
 let notes = [], current = null, session, dirty = false, pending = false;
 let formatBackup = null;
+let listView='reading', readingTarget=null;
 const fields = ['title','date','status','paper_url','authors','tags','summary','code_url'];
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
 let activityVersion=null, activitySession=null, activityDate=today();
@@ -30,22 +31,29 @@ loadActivities().catch(e=>{$('activity-state').textContent=e.message;$('activity
 function state(text,error=false) { $('state').textContent=text; $('state').classList.toggle('error',error); }
 function renderList() {
   $('list').replaceChildren();
+  $('cart-count').textContent=notes.filter(n=>n.metadata.status==='准备阅读').length;
+  $('tab-cart').setAttribute('aria-pressed',String(listView==='cart'));
+  $('tab-reading').setAttribute('aria-pressed',String(listView==='reading'));
   const keywords = $('search').value.normalize('NFKC').toLowerCase().trim().split(/\s+/).filter(Boolean);
-  const filtered = notes.filter(n => {
+  const filtered = notes.filter(n => (n.metadata.status==='准备阅读')===(listView==='cart')).filter(n => {
     const text = [n.metadata.title, n.metadata.authors, ...(n.metadata.tags || []), n.metadata.summary, n.body].join(' ').normalize('NFKC').toLowerCase();
     return keywords.every(keyword => text.includes(keyword));
   }).sort((a,b)=>String(b.metadata.date).localeCompare(String(a.metadata.date)));
   for (const note of filtered) {
     const item = document.createElement('button'); item.className='note-item' + (note.file === current?.file ? ' active' : '');
-    const date = document.createElement('span'); date.textContent=`${note.metadata.date}${note.draft ? ' · 草稿' : ''}`;
+    const date = document.createElement('span'); date.textContent=note.metadata.status==='准备阅读' ? '准备阅读 · 尚未开始' : `${note.metadata.date}${note.draft ? ' · 草稿' : ''}`;
     const title = document.createElement('strong'); title.textContent=note.metadata.title; item.append(date,title);
-    item.onclick=()=>{if (!pending && (!dirty || confirm('当前内容尚未保存，是否离开？'))) openNote(note);}; $('list').append(item);
+    item.onclick=()=>{if (!pending && (!dirty || confirm('当前内容尚未保存，是否离开？'))) openNote(note);};
+    const row=document.createElement('div');row.className='note-row';row.append(item);
+    if(note.metadata.status==='准备阅读'){const start=document.createElement('button');start.className='start-reading';start.textContent='开始阅读 →';start.onclick=()=>showReadingDialog(note);row.append(start);}
+    $('list').append(row);
   }
-  if (!filtered.length) $('list').textContent='还没有匹配的笔记。';
+  if (!filtered.length) $('list').textContent=$('search').value.trim() ? '没有匹配的论文。' : listView==='cart' ? '把想读的论文放进来，准备好后再开始。' : '选择待读论文，开始一次阅读。';
 }
 function openNote(note) {
   formatBackup=null; $('undo-format').disabled=true;
   current=structuredClone(note); dirty=false;
+  listView=note.metadata.status==='准备阅读'?'cart':'reading';
   for (const field of fields) $(field).value = field === 'tags' ? (note.metadata.tags || []).join(', ') : note.metadata[field] || '';
   if (note.metadata.status && !$('status').value) { const option=new Option(note.metadata.status,note.metadata.status); $('status').add(option); $('status').value=note.metadata.status; }
   $('body').value=note.body || ''; renderList(); preview(); state(note.draft ? '草稿已保存' : '已载入笔记');
@@ -130,13 +138,15 @@ async function save(publish=false) {
     for (const field of fields) $(field).value=field==='tags' ? (data.metadata.tags || []).join(', ') : data.metadata[field] || '';
     $('body').value=data.body;preview();
     const index=notes.findIndex(n=>n.file===current.file); if(index<0) notes.push(current);else notes[index]=current;
+    listView=data.metadata.status==='准备阅读'?'cart':'reading';
     dirty=false;
     if(!dirty) sessionStorage.removeItem('reading-unsaved');
     renderList(); state(dirty?'已保存，仍有新修改':publish?'已发布 · 网站部署后更新':'草稿已保存');
-  } catch(e) {state(e.message,true);} finally {pending=false;$('save').disabled=$('publish').disabled=$('new').disabled=false;controls.forEach(control=>control.disabled=false);}
+    return true;
+  } catch(e) {state(e.message,true);return false;} finally {pending=false;$('save').disabled=$('publish').disabled=$('new').disabled=false;controls.forEach(control=>control.disabled=false);}
 }
 function newNote() {
-  const date=today(); openNote({file:`${date}-${crypto.randomUUID().slice(0,8)}.md`,metadata:{title:'',date,status:'阅读中',tags:[]},body:'## 论文讲什么\n\n\n## 关键方法\n\n\n## 我的想法\n\n\n## 还没想明白的问题\n\n',version:null,draft:true}); $('title').focus(); changed();
+  listView='reading'; const date=today(); openNote({file:`${date}-${crypto.randomUUID().slice(0,8)}.md`,metadata:{title:'',date,status:'阅读中',tags:[]},body:'## 论文讲什么\n\n\n## 关键方法\n\n\n## 我的想法\n\n\n## 还没想明白的问题\n\n',version:null,draft:true}); $('title').focus(); changed();
 }
 $('new').onclick=()=>{if(!dirty || confirm('当前内容尚未保存，是否离开？'))newNote();};
 $('search').oninput=renderList;
@@ -193,3 +203,37 @@ document.addEventListener('keydown',e=>{if(document.activeElement===$('body') &&
 document.addEventListener('keydown',e=>{if((e.ctrlKey || e.metaKey)&&e.key==='s'){e.preventDefault();save();}});
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
 fetch('/api/notes').then(async res=>{if(!res.ok)throw new Error('无法载入笔记');const data=await res.json();notes=data.notes;session=data.session;const recovered=sessionStorage.getItem('reading-unsaved');if(recovered){const note=JSON.parse(recovered);note.recoveredWithoutBaseline=!note.baseMetadata;openNote(note);dirty=true;state('已恢复未保存内容');}else if(notes.length)openNote(notes.slice().sort((a,b)=>String(b.metadata.date).localeCompare(String(a.metadata.date)))[0]);else newNote();}).catch(e=>{state(e.message,true);$('save').disabled=$('publish').disabled=true;});
+
+function setListView(view){if(pending)return;listView=view;renderList();}
+$('tab-cart').onclick=()=>setListView('cart');
+$('tab-reading').onclick=()=>setListView('reading');
+$('add-paper').onclick=()=>{if(pending)return;$('paper-form').reset();$('paper-dialog').showModal();$('paper-title').focus();};
+$('cancel-paper').onclick=()=>$('paper-dialog').close();
+$('paper-form').onsubmit=async event=>{
+  event.preventDefault();if(pending)return;
+  const title=$('paper-title').value.trim(),link=$('paper-link').value.trim();
+  if(!title){$('paper-title').setCustomValidity('请填写论文标题');$('paper-title').reportValidity();return;}
+  const duplicate=notes.find(n=>n.metadata.paper_url===link);
+  if(dirty && !await save())return;
+  if(duplicate){$('paper-dialog').close();openNote(duplicate);state('这篇论文已在清单中');return;}
+  const date=today();
+  openNote({file:`${date}-${crypto.randomUUID().slice(0,8)}.md`,metadata:{title,date,status:'准备阅读',tags:[],paper_url:link},body:'## 阅读笔记\n\n',version:null,draft:true});
+  changed();$('paper-dialog').close();
+  if(await save())state('已加入待读清单 · 开始阅读时选择日期');
+};
+$('paper-title').oninput=()=>$('paper-title').setCustomValidity('');
+function showReadingDialog(note){
+  if(pending)return;readingTarget=note.file;$('reading-paper-title').textContent=note.metadata.title;
+  $('reading-date').value=today();$('reading-error').textContent='';$('reading-dialog').showModal();
+}
+$('cancel-reading').onclick=()=>$('reading-dialog').close();
+$('reading-form').onsubmit=async event=>{
+  event.preventDefault();if(pending)return;
+  const date=$('reading-date').value;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return;
+  if(dirty && !await save()){$('reading-error').textContent='当前笔记保存失败，请先处理后重试';return;}
+  const note=notes.find(n=>n.file===readingTarget);if(!note)return;
+  openNote(note);$('date').value=date;$('status').value='阅读中';changed();
+  if(await save()){$('reading-dialog').close();state('已开始阅读 · '+date);$('body').focus();}
+  else $('reading-error').textContent='保存失败，内容已保留，请关闭此窗口后重试保存';
+};

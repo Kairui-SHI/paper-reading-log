@@ -8,3 +8,16 @@
 #activity-date, #activity-state { color: var(--muted); font-size: 12px; }
 .workspace { grid-template-rows: auto minmax(0, 1fr); }
 @media(max-width:640px) { .daily-activities { padding: 12px 16px; } }
+
+.reading-tabs {display:flex;gap:4px;padding:4px;background:#eaf0fb;border-radius:9px;margin-bottom:12px;}
+.reading-tabs button {flex:1;padding:7px 4px;font-size:12px;border:0;background:transparent;white-space:nowrap;}
+.reading-tabs button[aria-pressed="true"] {background:white;color:var(--blue);box-shadow:0 1px 4px #0c183012;}
+#cart-count {display:inline-block;min-width:18px;padding:0 4px;border-radius:10px;background:#e9eeff;color:var(--blue);}
+#add-paper {margin-bottom:12px;color:var(--blue);border-style:dashed;}
+.note-row {border-bottom:1px solid var(--line);padding-bottom:8px;}
+.note-row .note-item {margin-bottom:0;}
+.start-reading {margin:0 12px 4px;font-size:12px;color:var(--blue);background:#edf2ff;border:0;}
+.dialog-actions {display:flex;justify-content:flex-end;gap:8px;margin-top:20px;}
+#paper-dialog,#reading-dialog {width:min(460px,calc(100vw - 32px));}
+#reading-paper-title {overflow-wrap:anywhere;}
+#reading-error {color:#ad3636;}
