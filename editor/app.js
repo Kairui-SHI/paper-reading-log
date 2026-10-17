@@ -4,30 +4,81 @@ let formatBackup = null;
 let listView='reading', readingTarget=null;
 const fields = ['title','date','status','paper_url','authors','tags','summary','code_url'];
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
-let activityVersion=null, activitySession=null, activityDate=today();
-async function loadActivities() {
-  const res=await fetch('/api/activities');if(!res.ok)throw new Error('今日打卡载入失败');
-  const data=await res.json();activityVersion=data.version;activitySession=data.session;activityDate=today();
-  $('activity-date').textContent=activityDate;
-  $('activity-exercise').checked=data.activities[activityDate]?.exercise===true;
-  $('activity-piano').checked=data.activities[activityDate]?.piano===true;
+let activityVersion=null, activitySession=null, activityDate=today(), activityRecords={}, activityDirty=false, activityPending=false;
+let activityMonth=activityDate.slice(0,7);
+const activityControls=()=>[...document.querySelectorAll('#activity-dialog button, #activity-dialog input')];
+function renderActivityCalendar(){
+  $('activity-month').textContent=activityMonth.replace('-', ' 年 ')+' 月';
+  $('activity-calendar').replaceChildren();
+  const [year,month]=activityMonth.split('-').map(Number);
+  const offset=(new Date(year,month-1,1).getDay()+6)%7, count=new Date(year,month,0).getDate();
+  for(let i=0;i<offset;i++)$('activity-calendar').append(document.createElement('span'));
+  for(let day=1;day<=count;day++){
+    const date=`${activityMonth}-${String(day).padStart(2,'0')}`,record=activityRecords[date] || {};
+    const button=document.createElement('button');button.type='button';button.className='activity-day';button.textContent=day;
+    button.dataset.date=date;button.disabled=activityPending;button.classList.toggle('selected',date===activityDate);button.classList.toggle('today',date===today());
+    button.setAttribute('aria-pressed',String(date===activityDate));if(date===today())button.setAttribute('aria-current','date');
+    button.setAttribute('aria-label',`${date}${record.exercise?'，已健身':''}${record.piano?'，已练琴':''}`);
+    const dots=document.createElement('span');dots.className='activity-dots';
+    for(const kind of ['exercise','piano'])if(record[kind]){const dot=document.createElement('i');dot.className=kind+'-dot';dots.append(dot);}
+    button.append(dots);button.onclick=()=>selectActivityDate(date);$('activity-calendar').append(button);
+  }
 }
-async function updateActivities(publish) {
-  if(today()!==activityDate){await loadActivities();$('activity-state').textContent='日期已切换，请确认今天的状态再保存';return;}
-  const controls=['activity-save','activity-publish','activity-exercise','activity-piano'].map($);
-  controls.forEach(e=>e.disabled=true);
-  try {
+function showActivityDate(){
+  $('activity-date').value=activityDate;
+  $('activity-exercise').checked=activityRecords[activityDate]?.exercise===true;
+  $('activity-piano').checked=activityRecords[activityDate]?.piano===true;
+  activityDirty=false;renderActivityCalendar();
+}
+async function loadActivities(){
+  const res=await fetch('/api/activities');if(!res.ok)throw new Error('打卡记录载入失败，请关闭后重新打开');
+  const data=await res.json();activityVersion=data.version;activitySession=data.session;activityRecords=data.activities;
+  showActivityDate();
+}
+async function updateActivities(publish){
+  if(activityPending || !activitySession)return false;
+  activityPending=true;activityControls().forEach(e=>e.disabled=true);
+  try{
     $('activity-state').textContent=publish?'正在同步…':'正在保存…';
     const data={date:activityDate,exercise:$('activity-exercise').checked,piano:$('activity-piano').checked,version:activityVersion,publish,token:publish?$('token').value.trim():undefined};
     const send=()=>fetch('/api/activities',{method:'POST',headers:{'Content-Type':'application/json','X-Editor-Session':activitySession},body:JSON.stringify(data)});
     let res=await send();if(res.status===403){const fresh=await(await fetch('/api/activities')).json();activitySession=fresh.session;res=await send();}
-    const result=await res.json();if(!res.ok)throw new Error(result.error);activityVersion=result.version;
-    $('activity-state').textContent=publish?'已同步 · 部署后更新':'已保存到本地';
-  }catch(e){$('activity-state').textContent=e.message;}finally{controls.forEach(e=>e.disabled=false);}
+    const result=await res.json();if(!res.ok)throw new Error(result.error);
+    activityVersion=result.version;activityRecords=result.activities;activityDirty=false;
+    $('activity-state').textContent=publish?'已同步 · 网站部署后更新':'已保存 · '+activityDate;
+    return true;
+  }catch(e){$('activity-state').textContent=e.message;return false;}
+  finally{activityPending=false;activityControls().forEach(e=>e.disabled=false);renderActivityCalendar();}
 }
+async function selectActivityDate(date){
+  if(activityPending)return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){$('activity-date').value=activityDate;return;}
+  if(activityDirty && !await updateActivities(false)){$('activity-date').value=activityDate;return;}
+  activityDate=date;activityMonth=date.slice(0,7);showActivityDate();$('activity-state').textContent='';
+}
+async function shiftActivityMonth(delta){
+  if(activityPending)return;
+  if(activityDirty && !await updateActivities(false))return;
+  const [y,m]=activityMonth.split('-').map(Number),d=new Date(y,m-1+delta,1);
+  activityMonth=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;renderActivityCalendar();
+}
+$('activity-prev').onclick=()=>shiftActivityMonth(-1);$('activity-next').onclick=()=>shiftActivityMonth(1);
+$('activity-today').onclick=()=>selectActivityDate(today());
+$('activity-date').onchange=()=>selectActivityDate($('activity-date').value);
 $('activity-save').onclick=()=>updateActivities(false);$('activity-publish').onclick=()=>updateActivities(true);
-for(const id of ['activity-exercise','activity-piano'])$(id).onchange=()=>$('activity-state').textContent='未保存';
-loadActivities().catch(e=>{$('activity-state').textContent=e.message;$('activity-save').disabled=$('activity-publish').disabled=true;});
+for(const id of ['activity-exercise','activity-piano'])$(id).onchange=()=>{activityDirty=true;$('activity-state').textContent='未保存';};
+$('open-activity-calendar').onclick=async()=>{
+  $('activity-dialog').showModal();
+  if(!activityDirty){
+    activityPending=true;activityControls().forEach(e=>e.disabled=true);$('activity-state').textContent='正在载入…';
+    try{await loadActivities();$('activity-state').textContent='';}catch(e){$('activity-state').textContent=e.message;}
+    finally{activityPending=false;activityControls().forEach(e=>e.disabled=false);renderActivityCalendar();if(!activitySession){$('activity-exercise').disabled=$('activity-piano').disabled=$('activity-save').disabled=$('activity-publish').disabled=true;}}
+  }
+};
+async function closeActivityCalendar(){if(activityPending)return;if(activityDirty && !await updateActivities(false))return;$('activity-dialog').close();}
+$('close-activity-calendar').onclick=closeActivityCalendar;
+$('activity-dialog').addEventListener('cancel',event=>{event.preventDefault();closeActivityCalendar();});
+renderActivityCalendar();
 function state(text,error=false) { $('state').textContent=text; $('state').classList.toggle('error',error); }
 function renderList() {
   $('list').replaceChildren();
@@ -201,7 +252,7 @@ $('restore-note').onclick=async()=>{
 };
 document.addEventListener('keydown',e=>{if(document.activeElement===$('body') && (e.ctrlKey || e.metaKey) && ['b','i'].includes(e.key.toLowerCase())){e.preventDefault();insertFormatting(e.key.toLowerCase()==='b'?'**文字**':'*文字*');}});
 document.addEventListener('keydown',e=>{if((e.ctrlKey || e.metaKey)&&e.key==='s'){e.preventDefault();save();}});
-window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
+window.addEventListener('beforeunload',e=>{if(dirty || activityDirty || activityPending){e.preventDefault();e.returnValue='';}});
 fetch('/api/notes').then(async res=>{if(!res.ok)throw new Error('无法载入笔记');const data=await res.json();notes=data.notes;session=data.session;const recovered=sessionStorage.getItem('reading-unsaved');if(recovered){const note=JSON.parse(recovered);note.recoveredWithoutBaseline=!note.baseMetadata;openNote(note);dirty=true;state('已恢复未保存内容');}else if(notes.length)openNote(notes.slice().sort((a,b)=>String(b.metadata.date).localeCompare(String(a.metadata.date)))[0]);else newNote();}).catch(e=>{state(e.message,true);$('save').disabled=$('publish').disabled=true;});
 
 function setListView(view){if(pending)return;listView=view;renderList();}
