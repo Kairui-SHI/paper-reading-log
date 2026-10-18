@@ -2,6 +2,7 @@
 layout: default
 title: 阅读记录
 ---
+{% assign reading_notes = site.notes | where_exp: "note", "note.status != '准备阅读'" | sort: 'date' | reverse %}
 <div class="home-intro">
 <section class="hero">
   <div>
@@ -26,7 +27,7 @@ title: 阅读记录
 </section>
 </div>
 <script id="calendar-notes" type="application/json">[
-{% assign calendar_notes = site.notes | sort: 'date' | reverse %}
+{% assign calendar_notes = reading_notes %}
 {% for note in calendar_notes %}
 {"date": {{ note.date | date: '%Y-%m-%d' | jsonify }}, "title": {{ note.title | jsonify }}, "url": {{ note.url | relative_url | jsonify }}}{% unless forloop.last %},{% endunless %}
 {% endfor %}
@@ -40,7 +41,7 @@ title: 阅读记录
       <span class="section-index">01</span>
       <h2 id="notes-title">阅读记录</h2>
     </div>
-    <span class="note-count">{{ site.notes | size }} NOTES</span>
+    <span class="note-count">{{ reading_notes | size }} NOTES</span>
   </div>
 
   <div class="note-search">
@@ -49,7 +50,7 @@ title: 阅读记录
     <span id="search-count" role="status" aria-live="polite"></span>
   </div>
   <p id="search-empty" class="search-empty" hidden>没有匹配的阅读记录，试试其他关键词。</p>
-  {% assign notes = site.notes | sort: "date" | reverse %}
+  {% assign notes = reading_notes %}
   {% if notes.size > 0 %}
     <div class="note-list" id="reading-note-list">
       {% for note in notes %}
