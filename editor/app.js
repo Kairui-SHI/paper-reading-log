@@ -96,7 +96,7 @@ function renderList() {
     const title = document.createElement('strong'); title.textContent=note.metadata.title; item.append(date,title);
     item.onclick=()=>{if (!pending && (!dirty || confirm('当前内容尚未保存，是否离开？'))) openNote(note);};
     const row=document.createElement('div');row.className='note-row';row.append(item);
-    if(note.metadata.status==='准备阅读'){const start=document.createElement('button');start.className='start-reading';start.textContent='开始阅读 →';start.onclick=()=>showReadingDialog(note);row.append(start);}
+    {const start=document.createElement('button');start.className='start-reading';start.textContent=note.metadata.status==='准备阅读'?'开始阅读 →':'再读一次';start.onclick=()=>showReadingDialog(note);row.append(start);}
     $('list').append(row);
   }
   if (!filtered.length) $('list').textContent=$('search').value.trim() ? '没有匹配的论文。' : listView==='cart' ? '把想读的论文放进来，准备好后再开始。' : '选择待读论文，开始一次阅读。';
@@ -303,7 +303,9 @@ $('reading-form').onsubmit=async event=>{
   if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return;
   if(dirty && !await save()){$('reading-error').textContent='当前笔记保存失败，请先处理后重试';return;}
   const note=notes.find(n=>n.file===readingTarget);if(!note)return;
-  openNote(note);$('date').value=date;$('status').value='阅读中';changed();
+  if(note.metadata.status==='准备阅读')openNote(note);
+  else openNote({file:`${date}-${crypto.randomUUID().slice(0,8)}.md`,metadata:{...structuredClone(note.metadata),date,status:'阅读中'},body:'## 本次阅读笔记\n\n',version:null,draft:true});
+  $('date').value=date;$('status').value='阅读中';changed();
   if(await save()){$('reading-dialog').close();state('已开始阅读 · '+date);$('body').focus();}
   else $('reading-error').textContent='保存失败，内容已保留，请关闭此窗口后重试保存';
 };

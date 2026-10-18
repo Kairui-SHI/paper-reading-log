@@ -34,5 +34,14 @@ try{
  await page.locator('.start-reading').click();await page.locator('#cancel-reading').click();assert.equal(notes[2].metadata.status,'准备阅读');
  await page.locator('#search').fill('Next paper');assert.equal(await page.locator('.note-item').count(),1);
  await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
- assert.deepEqual(errors,[]);console.log('Passed: queue, start with chosen date, preserve body and unsaved edits, add, duplicate guard, cancel, search, mobile width.');
+ await page.locator('#search').fill('');await page.locator('#tab-reading').click();
+ const original=structuredClone(notes[0]);
+ await page.locator('.note-row').filter({hasText:'GAE queued paper'}).getByRole('button',{name:'再读一次'}).click();
+ await page.locator('#reading-date').fill('2026-10-18');await page.locator('#reading-form button[type=submit]').click();
+ await page.waitForFunction(()=>document.getElementById('state').textContent==='已开始阅读 · 2026-10-18');
+ assert.equal(notes.length,4);assert.deepEqual(notes[0],original);
+ assert.notEqual(notes[3].file,original.file);assert.equal(notes[3].metadata.paper_url,original.metadata.paper_url);
+ assert.equal(notes[3].metadata.date,'2026-10-18');assert.equal(notes[3].metadata.status,'阅读中');
+ assert.equal(notes[3].body,'## 本次阅读笔记\n\n');
+ assert.deepEqual(errors,[]);console.log('Passed: queue, start, preserve edits, duplicate guard, search, mobile, repeat reading creates an independent dated note.');
 }finally{await browser.close();}
