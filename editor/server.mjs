@@ -13,7 +13,7 @@ const port = Number(process.env.PORT || 4317);
 const origin = `http://127.0.0.1:${port}`;
 const session = randomUUID();
 let busy = false;
-const git = (...args) => exec('git', args, { cwd: root, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } });
+const git = (...args) => exec('git', ['-c', `safe.directory=${root.split(path.sep).join('/')}`, ...args], { cwd: root, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } });
 const read = async p => { try { return await fs.readFile(p, 'utf8'); } catch (e) { if (e.code === 'ENOENT') return null; throw e; } };
 function filename(value) {
   if (!/^[\p{L}\p{N}][\p{L}\p{N}_.-]*\.md$/u.test(value || '') || value.includes('..')) throw new Error('文件名无效');
@@ -60,11 +60,29 @@ export function activitySource(source, data) {
   activities[data.date]={...(activities[data.date] || {}),exercise:data.exercise,piano:data.piano};
   return YAML.stringify(activities);
 }
+export function mergeActivities(baseSource, localSource, remoteSource, selectedDate) {
+  const base=YAML.parse(baseSource || '') || {}, local=YAML.parse(localSource || '') || {}, remote=YAML.parse(remoteSource || '') || {};
+  const merged={};
+  for(const date of new Set([...Object.keys(base),...Object.keys(local),...Object.keys(remote)])){
+    merged[date]={};
+    for(const key of new Set([...Object.keys(base[date] || {}),...Object.keys(local[date] || {}),...Object.keys(remote[date] || {})])){
+      const b=base[date]?.[key], l=local[date]?.[key], r=remote[date]?.[key];
+      const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+      let value;
+      if(date===selectedDate && (key==='exercise' || key==='piano'))value=l;
+      else if(same(l,b))value=r;
+      else if(same(r,b) || same(l,r))value=l;
+      else throw new Error(`${date} 的打卡记录有不同修改，请核对后选择该日期重新同步`);
+      if(value!==undefined)merged[date][key]=value;
+    }
+  }
+  return YAML.stringify(merged);
+}
 async function saveActivities(data) {
   const target=path.join(root,'_data','activities.yml');
   const current=await read(target);
   if(current !== (data.version ?? null)) throw new Error('活动记录已更新，请重新载入后再保存');
-  const source=activitySource(current,data);
+  let source=activitySource(current,data);
   if(data.publish) {
     if(!data.token) throw new Error('请先在发布设置填写 GitHub 令牌；也可以先保存到本地');
     const url='https://api.github.com/repos/kairui-shi/paper-reading-log/contents/_data/activities.yml';
@@ -72,13 +90,14 @@ async function saveActivities(data) {
     const response=await fetch(`${url}?ref=main`,{headers});
     if(!response.ok && response.status!==404) throw new Error(await githubError(response));
     const existing=response.ok ? await response.json() : null;
-    if(existing) {
-      const remote=Buffer.from(existing.content,'base64').toString('utf8').replace(/\r\n/g,'\n');
-      let base=null;try{base=(await git('show','origin/main:_data/activities.yml')).stdout.replace(/\r\n/g,'\n');}catch{}
-      if(remote !== current?.replace(/\r\n/g,'\n') && remote !== base) throw new Error('远程活动记录已变化，请先同步仓库');
-    }
+    const remote=existing ? Buffer.from(existing.content,'base64').toString('utf8') : '';
+    const basePath=path.join(root,'.editor-backups','activities-remote.yml');
+    let base=await read(basePath);
+    if(base===null){try{base=(await git('show','origin/main:_data/activities.yml')).stdout;}catch{throw new Error('无法读取活动记录的同步基准，本地打卡已保留');}}
+    source=mergeActivities(base,source,remote,data.date);
     const result=await fetch(url,{method:'PUT',headers,body:JSON.stringify({message:`Update activities: ${data.date}`,content:Buffer.from(source).toString('base64'),branch:'main',...(existing?{sha:existing.sha}:{})})});
     if(!result.ok) throw new Error(await githubError(result));
+    await fs.mkdir(path.dirname(basePath),{recursive:true});await fs.writeFile(basePath,source);
   }
   await fs.mkdir(path.dirname(target),{recursive:true});await fs.writeFile(target,source);
   return {version:source,activities:YAML.parse(source),published:!!data.publish};
